@@ -1,0 +1,13 @@
+{
+  "name": "tma-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:client": "npm run dev --workspace=@tma/client",
+    "build:client": "npm run build --workspace=@tma/client"
+  }
+}
