@@ -77,6 +77,33 @@ export function InsideRoomArena() {
            } else {
               setCharacters(prev => prev.filter(c => c.id !== char.id));
            }
+         })
+        .subscribe();
+
+      // Realtime Mensajes (Burbujas Flotantes)
+      supabase.channel(`chat_${roomId}_${Date.now()}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tma_messages', filter: `room_id=eq.${roomId}` }, (payload) => {
+           const msg = payload.new as { message_type: string; character_id: string; content: string } | undefined;
+           if (!msg) return; 
+
+           if (msg.message_type === 'public' && msg.character_id !== currentCharacterId) {
+              setCharacters(prev => prev.map(c => {
+                 if (c.id === msg.character_id) {
+                    return { ...c, publicMessage: msg.content };
+                 }
+                 return c;
+              }));
+              
+              setTimeout(() => {
+                 if (!mounted) return;
+                 setCharacters(prev => prev.map(c => {
+                    if (c.id === msg.character_id && c.publicMessage === msg.content) {
+                       return { ...c, publicMessage: undefined };
+                    }
+                    return c;
+                 }));
+              }, 8000);
+           }
         })
         .subscribe();
     };
@@ -88,6 +115,8 @@ export function InsideRoomArena() {
       if (channel) {
         supabase.removeChannel(channel);
       }
+      // Automáticamente cerramos todos los canales de Supabase cuando se desmonta la arena entera
+      supabase.removeAllChannels();
     };
   }, [roomId]);
 
@@ -120,7 +149,7 @@ export function InsideRoomArena() {
                   name={char.tma_name || 'Estudiante'}
                   imageUrl={char.sprite_idle_url || char.image_url || PLACEHOLDER_IMG_1}
                   position={getPositionForIndex(index)}
-                  publicMessage={undefined} 
+                  publicMessage={char.publicMessage} 
                   onClick={handleCharacterClick}
                 />
               </Suspense>

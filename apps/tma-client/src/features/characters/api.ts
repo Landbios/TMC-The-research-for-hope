@@ -20,6 +20,7 @@ export interface TMACharacterData {
   tma_title: string;
   tma_biography: string;
   created_at: string;
+  publicMessage?: string;
   
   // V2 Stats
   investigation_points: number;
