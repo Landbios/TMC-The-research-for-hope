@@ -1,9 +1,18 @@
 'use client';
 
 import { Suspense } from 'react';
-import { Shield } from 'lucide-react';
+import { Shield, Power } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
   return (
     <div className="min-h-screen bg-(--bg) text-(--text) flex flex-col items-center">
       {/* Grid Background */}
@@ -20,6 +29,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="flex items-center gap-6">
           <span className="mono-label hidden md:inline-block">Conexión Segura</span>
           <div className="w-2 h-2 rounded-full bg-(--glow) shadow-[0_0_8px_var(--glow)] animate-pulse" />
+          <button 
+            onClick={handleLogout}
+            className="ml-4 flex items-center gap-1 px-3 py-1.5 border border-(--danger) text-(--danger) hover:bg-(--danger-hover) hover:text-white transition-colors text-[0.6rem] uppercase tracking-widest font-mono rounded-sm"
+            title="Desconectar Terminal"
+          >
+            <Power size={12} />
+            <span className="hidden sm:inline">DISCONNECT</span>
+          </button>
         </div>
       </nav>
 
