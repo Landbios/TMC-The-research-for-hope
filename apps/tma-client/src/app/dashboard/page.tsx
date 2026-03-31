@@ -10,11 +10,15 @@ export default async function DashboardPage() {
     redirect('/dashboard/enroll');
   }
 
-  // Fallbacks for data from the Vault
+  // Fallbacks for data from the Vault or Custom TMA inputs
+  const finalName = character.tmc_character?.name || character.tma_name || 'UNKNOWN SUBJECT';
+  const finalImageUrl = character.tmc_character?.image_url || character.image_url;
   const inceptDate = character.created_at ? new Date(character.created_at).toLocaleDateString() : 'UNKNOWN';
-  const ageStr = character.age ? character.age.toUpperCase() : 'CLASSIFIED';
-  const nationalityStr = character.nationality ? character.nationality.toUpperCase() : 'UNKNOWN';
-  const heightStr = character.height ? character.height.toUpperCase() : 'UNKNOWN';
+  
+  // Specific properties (only exist if coming from TMC vault currently)
+  const ageStr = character.tmc_character?.age ? character.tmc_character.age.toUpperCase() : 'CLASSIFIED';
+  const nationalityStr = character.tmc_character?.nationality ? character.tmc_character.nationality.toUpperCase() : 'UNKNOWN';
+  const heightStr = character.tmc_character?.height ? character.tmc_character.height.toUpperCase() : 'UNKNOWN';
 
   return (
     <div className="flex flex-col items-center justify-center w-full max-w-4xl mx-auto h-full animate-fade-in relative pt-4">
@@ -33,7 +37,7 @@ export default async function DashboardPage() {
 
         {/* HEADER */}
         <div className="flex justify-between items-end border-b border-(--glow) pb-2 mb-2">
-          <h1 className="font-mono text-xl md:text-2xl font-bold tracking-widest uppercase">
+          <h1 className="font-mono text-xl md:text-2xl font-bold tracking-widest uppercase truncate max-w-[80%]">
             SUBJECT A-{character.id.split('-')[0].substring(0,2).toUpperCase()}
           </h1>
           <div className="flex items-center gap-2 opacity-80">
@@ -52,10 +56,10 @@ export default async function DashboardPage() {
               <span className="font-mono text-[10px] uppercase animate-pulse">REC ●</span>
             </div>
             <div className="relative w-full flex-1 bg-black overflow-hidden cctv-filter border border-(--glow)/30">
-              {character.image_url ? (
+              {finalImageUrl ? (
                 <Image
-                  src={character.image_url}
-                  alt={character.name}
+                  src={finalImageUrl}
+                  alt={finalName}
                   fill
                   className="object-cover relative z-10"
                   unoptimized
@@ -75,7 +79,7 @@ export default async function DashboardPage() {
             <div className="sci-border flex-1 p-3 flex flex-col gap-2 font-mono text-xs md:text-sm">
               <div className="flex border-b border-(--glow)/30 pb-1">
                 <span className="w-1/3 opacity-70">NAME</span>
-                <span className="flex-1 text-right text-(--text-muted)">{character.name.toUpperCase()}</span>
+                <span className="flex-1 text-right text-(--text-muted) truncate pl-2">{finalName.toUpperCase()}</span>
               </div>
               <div className="flex border-b border-(--glow)/30 pb-1">
                 <span className="w-1/3 opacity-70">INCEPT DATE</span>

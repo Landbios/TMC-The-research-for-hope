@@ -138,15 +138,21 @@ function LoginForm() {
               }}
               className="text-2xl font-bold uppercase text-center"
             >
-              {isSignUp ? 'Reclutar Cadete' : 'Acceder a Bóveda'}
+              {isSignUp ? (
+                'RECLUTAMIENTO'
+              ) : (
+                <span className="zetsubo-glitch" data-text="KIZOKU (貴族)" data-glitch="ZETSUBŌ (絶望)">
+                  KIZOKU (貴族)
+                </span>
+              )}
             </h1>
             <p
               style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-muted)', letterSpacing: '0.1em' }}
               className="mt-2 text-center"
             >
               {isSignUp
-                ? 'Crea tu perfil de oficial para comenzar'
-                : 'Ingresa tus credenciales para acceder a tus archivos'}
+                ? 'INGRESA A LA RED DE LA ACADEMIA'
+                : 'BIENVENIDO A LA ACADEMIA // IDENTIFÍQUESE'}
             </p>
           </div>
 
