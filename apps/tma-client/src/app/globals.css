@@ -125,7 +125,6 @@ body {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    /* Granulado Shion DB + Barra de escaneo intensa cruzando la imagen */
     background: 
       url('https://www.transparenttextures.com/patterns/black-scales.png'),
       linear-gradient(to bottom, transparent, color-mix(in srgb, var(--glow) 40%, transparent), transparent);
@@ -143,7 +142,6 @@ body {
     background: radial-gradient(circle, transparent 50%, rgba(0, 5, 20, 0.5) 120%);
     z-index: 21;
   }
-  
   .crt-scanline {
     position: absolute;
     inset: 0;
