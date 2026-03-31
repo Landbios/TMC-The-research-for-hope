@@ -1,0 +1,28 @@
+import Link from 'next/link';
+import { InsideRoomArena } from '@/features/exploration/components/InsideRoomArena';
+
+export default function RoomPage({ params }: { params: { roomId: string } }) {
+  return (
+    <div className="flex flex-col w-full h-screen min-h-screen bg-black text-(--glow) relative overflow-hidden pointer-events-auto">
+      {/* Botón Volver (Nervalis) */}
+      <div className="absolute top-4 left-4 z-50">
+        <Link href="/map" className="px-5 py-2.5 border-[1.5px] border-(--glow) bg-black/70 backdrop-blur-md hover:bg-(--glow) hover:text-black transition-all font-mono text-xs md:text-sm uppercase tracking-widest flex items-center gap-2 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M15 19l-7-7 7-7"/></svg>
+          SISTEMA NERVALIS / MAPA
+        </Link>
+      </div>
+
+      <div className="absolute top-4 right-4 z-50 pointer-events-none">
+        <div className="px-6 py-2 border-[1.5px] border-(--glow) bg-black/70 backdrop-blur-md opacity-80 uppercase font-mono text-sm tracking-widest text-(--glow)">
+          CURRENT_ZONE: {params.roomId}
+        </div>
+      </div>
+
+      {/* Room Environment Layer Z-0 */}
+      <InsideRoomArena />
+
+      {/* Efectos de CRT */}
+      <div className="fixed inset-0 crt-scanline pointer-events-none z-40 opacity-50 mix-blend-overlay" />
+    </div>
+  );
+}

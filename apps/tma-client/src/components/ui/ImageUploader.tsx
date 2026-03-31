@@ -131,7 +131,7 @@ export default function ImageUploader({
           </button>
 
           {value && !uploading && (
-            <div className="w-[60px] h-[60px] sci-border flex-shrink-0 cctv-filter p-1 bg-black overflow-hidden relative group">
+            <div className="w-[60px] h-[60px] sci-border shrink-0 cctv-filter p-1 bg-black overflow-hidden relative group">
               <img src={value} alt="Current" className="w-full h-full object-cover relative z-10" />
             </div>
           )}

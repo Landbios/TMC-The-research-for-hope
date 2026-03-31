@@ -1,5 +1,6 @@
 import { getTMACharacter, getGameState } from '@/features/characters/api';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import Image from 'next/image';
 import { Battery } from 'lucide-react';
 import { TmaStoreInitializer } from '@/components/TmaStoreInitializer';
@@ -147,7 +148,7 @@ export default async function DashboardPage() {
                </button>
 
                {/* BTN 2: Mapa 3D */}
-               <button className="sci-border p-2 flex flex-col items-center justify-center hover:bg-(--glow)/5 transition-colors group relative h-full min-h-[140px]">
+               <Link href="/map" className="sci-border p-2 flex flex-col items-center justify-center hover:bg-(--glow)/5 transition-colors group relative h-full min-h-[140px]">
                  <span className="font-mono text-[9px] opacity-80 self-start absolute top-2 left-2"> [ MAPA 3D ] </span>
                  <div className="w-16 h-16 rounded-full border border-(--glow)/40 relative mt-4 overflow-hidden shadow-[inset_0_0_10px_rgba(59,130,246,0.3)]">
                    <div className="absolute inset-0 border border-(--glow)/30 rounded-full transform rotate-45 scale-y-50" />
@@ -158,7 +159,7 @@ export default async function DashboardPage() {
                  <div className="h-[3px] bg-(--glow)/20 mt-4 rounded-full overflow-hidden absolute bottom-3 left-0 w-[calc(100%-1rem)] mx-2">
                    <div className="w-1/3 h-full bg-(--glow) shadow-[0_0_5px_var(--glow)] animate-pulse" />
                  </div>
-               </button>
+               </Link>
 
                {/* BTN 3: Reglamento */}
                <button className="sci-border p-2 flex flex-col items-center justify-center hover:bg-(--glow)/5 transition-colors group relative h-full min-h-[140px]">

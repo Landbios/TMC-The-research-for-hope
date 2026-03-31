@@ -43,7 +43,7 @@ export default function ImageCropperModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 text-(--glow)">
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 text-(--glow)">
       {/* Esquinas CRT */}
       <div className="fixed inset-0 pointer-events-none crt-scanline" />
       
