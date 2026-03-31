@@ -100,4 +100,43 @@ body {
     text-transform: uppercase;
     color: var(--text-muted);
   }
+  .sci-border {
+    border: 1px solid color-mix(in srgb, var(--glow) 40%, transparent);
+    background-color: color-mix(in srgb, var(--glow) 3%, transparent);
+    position: relative;
+  }
+  .sci-border::before, .sci-border::after {
+    content: '';
+    position: absolute;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    border: 1px solid color-mix(in srgb, var(--glow) 20%, transparent);
+    top: 2px; left: 2px;
+  }
+  .sci-border::after {
+    top: -2px; left: -2px;
+  }
+  .cctv-filter {
+    filter: sepia(0.6) hue-rotate(180deg) saturate(1.8) contrast(1.6) brightness(0.9);
+    mix-blend-mode: screen;
+  }
+  .crt-scanline {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      transparent 50%,
+      rgba(0, 0, 0, 0.25) 51%,
+      transparent 51%
+    );
+    background-size: 100% 4px;
+    z-index: 50;
+    animation: crtScroll 10s linear infinite;
+  }
+}
+
+@keyframes crtScroll {
+  from { background-position: 0 0; }
+  to { background-position: 0 100%; }
 }
