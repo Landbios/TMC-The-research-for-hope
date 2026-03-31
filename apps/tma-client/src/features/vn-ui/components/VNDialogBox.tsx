@@ -11,6 +11,7 @@ export function VNDialogBox() {
   const setSelectedRoomId = useTmaStore((state) => state.setSelectedRoomId);
   const [displayedText, setDisplayedText] = useState('');
   const [activeUsersCount, setActiveUsersCount] = useState<number | null>(null);
+  const [stealthHidden, setStealthHidden] = useState<boolean>(false);
   const router = useRouter();
   
   useEffect(() => {
@@ -51,6 +52,23 @@ export function VNDialogBox() {
     setSelectedRoomId(null);
   };
 
+  const executeEntry = async (isHidden: boolean) => {
+    if (!selectedRoomId) return;
+    setVnState({ isActive: false });
+    
+    // Inyectamos al usuario actual en la sala para que Sea Realtime
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from('tma_characters').update({ 
+         current_room_id: selectedRoomId, 
+         is_hidden: isHidden 
+      }).eq('user_id', user.id);
+    }
+    
+    router.push(`/rooms/${selectedRoomId}`);
+  };
+
   const handleEnterRoom = async (stealthAttempt: boolean = false) => {
     if (!selectedRoomId) return;
 
@@ -63,13 +81,13 @@ export function VNDialogBox() {
         success = d20 >= dummyRoll1;
       }
       
+      setStealthHidden(success);
       const resultMsg = `SISTEMA ALERTA: Tirada D20: \n[ ${d20} ]. \n\n${success ? 'Infiltración exitosa. Entrarás como observador oculto.' : '¡Has sido escuchado! Al entrar, serás delatado ante los ocupantes.'}`;
       setVnState({ isActive: true, speaker: 'SISTEMA NAV (RESULTADO)', text: resultMsg });
       return;
     }
 
-    setVnState({ isActive: false });
-    router.push(`/rooms/${selectedRoomId}`);
+    await executeEntry(false);
   };
 
   if (!vnState.isActive) return null;
@@ -96,11 +114,10 @@ export function VNDialogBox() {
           <span className="animate-pulse ml-1 opacity-70">_</span>
         </p>
 
-        {/* Botonera VN */}
         <div className="self-end flex gap-4 mt-3">
            {vnState.speaker === 'SISTEMA NAV (RESULTADO)' && (
              <button 
-               onClick={() => handleEnterRoom(false)}
+               onClick={() => executeEntry(stealthHidden)}
                className="px-4 py-1.5 border border-(--glow) text-(--glow) font-mono text-xs uppercase hover:bg-(--glow) hover:text-black transition-colors shadow-[0_0_10px_rgba(59,130,246,0.2)]"
              >
                [ CONTINUAR Y ENTRAR A LA SALA ]
