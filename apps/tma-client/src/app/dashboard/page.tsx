@@ -1,10 +1,13 @@
-import { getTMACharacter } from '@/features/characters/api';
+import { getTMACharacter, getGameState } from '@/features/characters/api';
 import { redirect } from 'next/navigation';
 import Image from 'next/image';
 import { Battery } from 'lucide-react';
+import { TmaStoreInitializer } from '@/components/TmaStoreInitializer';
+import { DashboardHudStats } from '@/features/dashboard/components/DashboardHudStats';
 
 export default async function DashboardPage() {
   const character = await getTMACharacter();
+  const gameState = await getGameState();
 
   if (!character) {
     redirect('/dashboard/enroll');
@@ -22,6 +25,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col items-center justify-center w-full max-w-4xl mx-auto h-full animate-fade-in relative pt-4">
+      {/* Hydration silenciosa del estado en Cliente */}
+      <TmaStoreInitializer character={character} gameState={gameState} />
 
       {/* Pantalla CRT global (se suma al bg del layout) */}
       <div className="fixed inset-0 crt-scanline pointer-events-none" />
@@ -101,10 +106,10 @@ export default async function DashboardPage() {
                 <span className="w-1/3 opacity-70">MENTAL STATE</span>
                 <span className="flex-1 text-right text-(--text-muted)">UNKNOWN</span>
               </div>
-              <div className="flex pt-1 mt-auto">
-                <span className="w-1/3 opacity-70">DR IN CHARGE</span>
-                <span className="flex-1 text-right tracking-[0.2em] text-(--danger)">A.S</span>
-              </div>
+              
+              {/* Reactivo desde Zustand: Points y Status */}
+              <DashboardHudStats />
+              
             </div>
 
             {/* RADAR / SENSOR WAVE SVG */}
