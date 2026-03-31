@@ -47,32 +47,44 @@ export function InsideRoomArena() {
     
     // Carga inicial
     const fetchChars = async () => {
+      // Obtenemos al usuario local para ocultar su propio cuerpo (First Person Camera)
+      const { data: { user } } = await supabase.auth.getUser();
+      const currentUserId = user?.id;
+
       const { data } = await supabase.from('tma_characters').select('*').eq('current_room_id', roomId);
-      if (data && mounted) setCharacters(data);
+      if (data && mounted) {
+        setCharacters(data.filter(c => c.user_id !== currentUserId));
+      }
+      
+      // Realtime Suscripción
+      const channel = supabase.channel(`room_${roomId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tma_characters' }, (payload) => {
+           const char = payload.new as any;
+           if (!char) return; 
+
+           // Jamás renderizamos nuestra propia entidad en 3D
+           if (char.user_id === currentUserId) return;
+
+           if (char.current_room_id === roomId) {
+              setCharacters(prev => {
+                 if(prev.find(c => c.id === char.id)) return prev.map(c => c.id === char.id ? char : c);
+                 return [...prev, char];
+              });
+           } else {
+              setCharacters(prev => prev.filter(c => c.id !== char.id));
+           }
+        })
+        .subscribe();
+        
+      return () => {
+        supabase.removeChannel(channel);
+      };
     };
+    
     fetchChars();
-
-    // Realtime Suscripción (Detecta Entradas/Salidas instantáneas)
-    const channel = supabase.channel(`room_${roomId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tma_characters' }, (payload) => {
-         const char = payload.new as any;
-         if (!char) return; // Si es DELETE puro, no hay payload.new default
-
-         if (char.current_room_id === roomId) {
-            setCharacters(prev => {
-               if(prev.find(c => c.id === char.id)) return prev.map(c => c.id === char.id ? char : c);
-               return [...prev, char];
-            });
-         } else {
-            // Se fue a otra sala
-            setCharacters(prev => prev.filter(c => c.id !== char.id));
-         }
-      })
-      .subscribe();
 
     return () => {
       mounted = false;
-      supabase.removeChannel(channel);
     };
   }, [roomId]);
 
