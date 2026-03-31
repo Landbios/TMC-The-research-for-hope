@@ -114,15 +114,16 @@ export function InsideRoomArena() {
             
             {/* Renderizar todos los Sprite Billboards */}
             {characters.map((char, index) => (
-              <CharacterSprite3D
-                key={char.id}
-                id={char.id}
-                name={char.tma_name || 'Estudiante'}
-                imageUrl={char.sprite_idle_url || char.image_url || PLACEHOLDER_IMG_1}
-                position={getPositionForIndex(index)}
-                publicMessage={undefined} 
-                onClick={handleCharacterClick}
-              />
+              <Suspense key={char.id} fallback={null}>
+                <CharacterSprite3D
+                  id={char.id}
+                  name={char.tma_name || 'Estudiante'}
+                  imageUrl={char.sprite_idle_url || char.image_url || PLACEHOLDER_IMG_1}
+                  position={getPositionForIndex(index)}
+                  publicMessage={undefined} 
+                  onClick={handleCharacterClick}
+                />
+              </Suspense>
             ))}
           </Suspense>
 

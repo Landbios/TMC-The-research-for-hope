@@ -14,9 +14,9 @@ export interface CharacterData {
 export interface TMACharacterData {
   id: string;
   user_id: string;
-  tmc_character_id?: string;
   tma_name?: string;
   image_url?: string;
+  sprite_idle_url?: string;
   tma_title: string;
   tma_biography: string;
   created_at: string;
