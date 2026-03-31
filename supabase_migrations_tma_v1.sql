@@ -51,10 +51,4 @@ CREATE POLICY "Los usuarios pueden borrar sus propios personajes en TMA"
   FOR DELETE
   USING (auth.uid() = user_id);
 
--- 4. AGREGAR MODO DE JUEGO A SCION
--- Insertar The Murder Academy en la tabla de categorías maestras si no existe
-INSERT INTO public.character_categories (name, description, slug)
-SELECT 'TMA: The Murder Game', 'Eventos, juicios e investigaciones de la academia', 'tma_murder_game'
-WHERE NOT EXISTS (
-  SELECT 1 FROM public.character_categories WHERE slug = 'tma_murder_game'
-);
+
