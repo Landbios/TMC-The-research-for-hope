@@ -102,8 +102,8 @@ export default async function DashboardPage() {
                 <span className="flex-1 text-right text-(--text-muted)">UNKNOWN</span>
               </div>
               <div className="flex pt-1 mt-auto">
-                <span className="w-1/3 opacity-70">THREAT LEVEL</span>
-                <span className="flex-1 text-right tracking-[0.2em] text-(--danger)">★★★</span>
+                <span className="w-1/3 opacity-70">DR IN CHARGE</span>
+                <span className="flex-1 text-right tracking-[0.2em] text-(--danger)">A.S</span>
               </div>
             </div>
 
@@ -129,7 +129,7 @@ export default async function DashboardPage() {
         {/* BOTTOM RAW DATA BLOCK */}
         <div className="w-full sci-border p-2 mt-2 bg-(--glow)/5 overflow-hidden">
            <p className="font-mono text-[8px] md:text-[10px] leading-tight text-(--glow) opacity-60 break-all">
-             48 65 78 20 64 61 74 61 20 64 75 6d 70 2e 20 53 79 73 74 65 6d 20 6c 6f 63 6b 65 64 2e 0a 41 6e 6f 6d 61 6c 79 20 64 65 74 65 63 74 65 64 2e 0a 49 6e 69 74 69 61 6c 69 7a 69 6e 67 20 54 4d 41 20 70 72 6f 74 6f 63 6f 6c 73 2e 2e 2e 20 5b 4f 4b 5d 0a 42 69 6f 6d 65 74 72 69 63 73 20 73 79 6e 63 20 63 6f 6d 70 6c 65 74 65 2e 0a 41 77 61 69 74 69 6e 67 20 6f 70 65 72 61 74 6f 72 20 69 6e 70 75 74 2e
+             01001100 01100001 00100000 01100011 01101001 01100101 01101110 01100011 01101001 01100001 00100000 01100101 01110011 00100000 01101110 01110101 01100101 01110011 01110100 01110010 01100001 00100000 01110101 01101110 01101001 01100011 01100001 00100000 01110011 01100001 01101100 01110110 01100001 01100011 01101001 01101111 01101110 00101110 00100000 01101100 01100001 00100000 01110011 01100101 01101100 01100101 01100011 01100011 01101001 01101111 01101110 00100000 01100100 01100101 01100010 01100101 00100000 01101000 01100001 01100011 01100101 01110010 01110011 01100101 00101100 00100000 01100001 01110101 01101110 00100000 01110011 01101001 00100000 01100101 01110011 00100000 01100001 01101110 01110100 01101001 01101110 01100001 01110100 01110101 01110010 01100001 01101100 00101110
            </p>
         </div>
 
