@@ -35,21 +35,12 @@ export function VNDialogBox() {
     if (selectedRoomId && vnState.speaker === 'SISTEMA NAV') {
       const getActiveUsers = async () => {
         const supabase = createClient();
-        const { count, data } = await supabase
+        const { count } = await supabase
           .from('tma_characters')
-          .select('id', { count: 'exact' })
+          .select('id', { count: 'exact', head: true })
           .eq('current_room_id', selectedRoomId);
           
-        // MOCKEO PARA CAPILLA: Simulamos que hay 2 jugadores dentro si le das clic a la capilla.
-        // Averiguamos el nombre del cuarto desde la DB o la store. En este caso sabemos que el componente
-        // llama a esta lógica, así que buscamos la info básica.
-        const { data: roomData } = await supabase.from('tma_rooms').select('name').eq('id', selectedRoomId).single();
-        
-        if (roomData?.name === 'Capilla') {
-          setActiveUsersCount(2); 
-        } else {
-          setActiveUsersCount(count || 0);
-        }
+        setActiveUsersCount(count || 0);
       };
       getActiveUsers();
     }
@@ -72,8 +63,9 @@ export function VNDialogBox() {
         success = d20 >= dummyRoll1;
       }
       
-      // Actualizaríamos la DB aquí.
-      alert(`Tirada D20: ${d20}. ${success ? 'Nadie te vio entrar (INFITLACIÓN EXITOSA).' : '¡Has hecho mucho ruido!'}`);
+      const resultMsg = `SISTEMA ALERTA: Tirada D20: \n[ ${d20} ]. \n\n${success ? 'Infiltración exitosa. Entrarás como observador oculto.' : '¡Has sido escuchado! Al entrar, serás delatado ante los ocupantes.'}`;
+      setVnState({ isActive: true, speaker: 'SISTEMA NAV (RESULTADO)', text: resultMsg });
+      return;
     }
 
     setVnState({ isActive: false });
@@ -106,6 +98,15 @@ export function VNDialogBox() {
 
         {/* Botonera VN */}
         <div className="self-end flex gap-4 mt-3">
+           {vnState.speaker === 'SISTEMA NAV (RESULTADO)' && (
+             <button 
+               onClick={() => handleEnterRoom(false)}
+               className="px-4 py-1.5 border border-(--glow) text-(--glow) font-mono text-xs uppercase hover:bg-(--glow) hover:text-black transition-colors shadow-[0_0_10px_rgba(59,130,246,0.2)]"
+             >
+               [ CONTINUAR Y ENTRAR A LA SALA ]
+             </button>
+           )}
+
            {vnState.speaker === 'SISTEMA NAV' && activeUsersCount !== null && activeUsersCount > 0 && (
              <button 
                onClick={() => handleEnterRoom(true)}

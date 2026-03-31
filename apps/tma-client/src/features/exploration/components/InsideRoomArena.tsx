@@ -3,11 +3,12 @@
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
-import { Suspense } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { useTmaStore } from '@/store/useTmaStore';
+import { createClient } from '@/lib/supabase/client';
 import { CharacterSprite3D } from './CharacterSprite3D';
 import { RoomNavigation } from './RoomNavigation';
-// Forzar recarga de cache
 
 function RoomCube() {
   return (
@@ -23,26 +24,57 @@ function RoomCube() {
 const PLACEHOLDER_IMG_1 = 'https://picsum.photos/seed/dangan1/400/600';
 const PLACEHOLDER_IMG_2 = 'https://picsum.photos/seed/dangan2/400/600';
 
-const MOCK_CHARACTERS = [
-  { 
-    id: 'char_1', 
-    name: 'MAESTRA MENTE', 
-    imageUrl: PLACEHOLDER_IMG_1, 
-    position: [5, 0, -8] as [number, number, number],
-    publicMessage: "¡Upupupu! ¿Están listos para la desesperación?"
-  },
-  { 
-    id: 'char_2', 
-    name: 'ESTUDIANTE PROTAGONISTA', 
-    imageUrl: PLACEHOLDER_IMG_2, 
-    position: [-6, 0, -5] as [number, number, number],
-  }
-];
+// Función auxiliar para esparcir personajes en la sala
+function getPositionForIndex(index: number): [number, number, number] {
+  const angle = index * (Math.PI / 4) + Math.PI; 
+  const radius = 6 + (index % 2); // Variar un poco el radio
+  return [Math.cos(angle) * radius, 0, Math.sin(angle) * radius - 2];
+}
 
 export function InsideRoomArena() {
+  const params = useParams();
+  const roomId = params?.roomId as string;
+  const [characters, setCharacters] = useState<any[]>([]);
+
   const gamePeriod = useTmaStore((state) => state.gamePeriod);
   const setVnState = useTmaStore((state) => state.setVnState);
   const isNight = gamePeriod === 'NIGHTTIME';
+
+  useEffect(() => {
+    if (!roomId || roomId === 'UNKNOWN_SECTOR') return;
+    let mounted = true;
+    const supabase = createClient();
+    
+    // Carga inicial
+    const fetchChars = async () => {
+      const { data } = await supabase.from('tma_characters').select('*').eq('current_room_id', roomId);
+      if (data && mounted) setCharacters(data);
+    };
+    fetchChars();
+
+    // Realtime Suscripción (Detecta Entradas/Salidas instantáneas)
+    const channel = supabase.channel(`room_${roomId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tma_characters' }, (payload) => {
+         const char = payload.new as any;
+         if (!char) return; // Si es DELETE puro, no hay payload.new default
+
+         if (char.current_room_id === roomId) {
+            setCharacters(prev => {
+               if(prev.find(c => c.id === char.id)) return prev.map(c => c.id === char.id ? char : c);
+               return [...prev, char];
+            });
+         } else {
+            // Se fue a otra sala
+            setCharacters(prev => prev.filter(c => c.id !== char.id));
+         }
+      })
+      .subscribe();
+
+    return () => {
+      mounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, [roomId]);
 
   // Iniciar susurro/chat visual novel con un personaje clickeado
   const handleCharacterClick = (id: string, name: string) => {
@@ -66,14 +98,14 @@ export function InsideRoomArena() {
             <RoomCube />
             
             {/* Renderizar todos los Sprite Billboards */}
-            {MOCK_CHARACTERS.map((char) => (
+            {characters.map((char, index) => (
               <CharacterSprite3D
                 key={char.id}
                 id={char.id}
-                name={char.name}
-                imageUrl={char.imageUrl}
-                position={char.position}
-                publicMessage={char.publicMessage}
+                name={char.tma_name || 'Estudiante'}
+                imageUrl={char.sprite_idle_url || char.image_url || PLACEHOLDER_IMG_1}
+                position={getPositionForIndex(index)}
+                publicMessage={undefined} 
                 onClick={handleCharacterClick}
               />
             ))}

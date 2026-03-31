@@ -2,10 +2,25 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { InsideRoomArena } from '@/features/exploration/components/InsideRoomArena';
+import { useEffect, useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
 export default function RoomPage() {
   const params = useParams();
   const roomId = params?.roomId || 'UNKNOWN_SECTOR';
+  const [roomName, setRoomName] = useState('CARGANDO DATOS...');
+
+  useEffect(() => {
+    if (roomId && roomId !== 'UNKNOWN_SECTOR') {
+      const fetchRoomName = async () => {
+        const supabase = createClient();
+        const { data } = await supabase.from('tma_rooms').select('name').eq('id', roomId).single();
+        if (data) setRoomName(data.name.toUpperCase());
+        else setRoomName('ZONA DESCONOCIDA');
+      };
+      fetchRoomName();
+    }
+  }, [roomId]);
 
   return (
     <div className="flex flex-col w-full h-screen min-h-screen bg-black text-(--glow) relative overflow-hidden pointer-events-auto">
@@ -19,7 +34,7 @@ export default function RoomPage() {
 
       <div className="absolute top-4 right-4 z-50 pointer-events-none">
         <div className="px-6 py-2 border-[1.5px] border-(--glow) bg-black/70 backdrop-blur-md opacity-80 uppercase font-mono text-sm tracking-widest text-(--glow)">
-          CURRENT_ZONE: {roomId}
+          CURRENT_ZONE: {roomName}
         </div>
       </div>
 
