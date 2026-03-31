@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useTmaStore } from '@/store/useTmaStore';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
 export function VNDialogBox() {
   const vnState = useTmaStore((state) => state.vnState);
@@ -9,6 +10,7 @@ export function VNDialogBox() {
   const selectedRoomId = useTmaStore((state) => state.selectedRoomId);
   const setSelectedRoomId = useTmaStore((state) => state.setSelectedRoomId);
   const [displayedText, setDisplayedText] = useState('');
+  const [activeUsersCount, setActiveUsersCount] = useState<number | null>(null);
   const router = useRouter();
   
   useEffect(() => {
@@ -27,16 +29,55 @@ export function VNDialogBox() {
     return () => clearInterval(intervalId);
   }, [vnState.text, vnState.isActive]);
 
+  // Checar si el cuarto está poblado para habilitar modo Sigilo
+  useEffect(() => {
+    setActiveUsersCount(null);
+    if (selectedRoomId && vnState.speaker === 'SISTEMA NAV') {
+      const getActiveUsers = async () => {
+        const supabase = createClient();
+        const { count, data } = await supabase
+          .from('tma_characters')
+          .select('id', { count: 'exact' })
+          .eq('current_room_id', selectedRoomId);
+          
+        // MOCKEO PARA CAPILLA: Simulamos que hay 2 jugadores dentro si le das clic a la capilla.
+        // Averiguamos el nombre del cuarto desde la DB o la store. En este caso sabemos que el componente
+        // llama a esta lógica, así que buscamos la info básica.
+        const { data: roomData } = await supabase.from('tma_rooms').select('name').eq('id', selectedRoomId).single();
+        
+        if (roomData?.name === 'Capilla') {
+          setActiveUsersCount(2); 
+        } else {
+          setActiveUsersCount(count || 0);
+        }
+      };
+      getActiveUsers();
+    }
+  }, [selectedRoomId, vnState.speaker]);
+
   const handleClose = () => {
     setVnState({ isActive: false });
     setSelectedRoomId(null);
   };
 
-  const handleEnterRoom = () => {
-    if (selectedRoomId) {
-      setVnState({ isActive: false });
-      router.push(`/rooms/${selectedRoomId}`);
+  const handleEnterRoom = async (stealthAttempt: boolean = false) => {
+    if (!selectedRoomId) return;
+
+    if (stealthAttempt) {
+      const d20 = Math.floor(Math.random() * 20) + 1;
+      let success = false;
+      if (d20 === 20) success = true;
+      else if (d20 >= 10) {
+        const dummyRoll1 = Math.floor(Math.random() * 20) + 1;
+        success = d20 >= dummyRoll1;
+      }
+      
+      // Actualizaríamos la DB aquí.
+      alert(`Tirada D20: ${d20}. ${success ? 'Nadie te vio entrar (INFITLACIÓN EXITOSA).' : '¡Has hecho mucho ruido!'}`);
     }
+
+    setVnState({ isActive: false });
+    router.push(`/rooms/${selectedRoomId}`);
   };
 
   if (!vnState.isActive) return null;
@@ -65,12 +106,24 @@ export function VNDialogBox() {
 
         {/* Botonera VN */}
         <div className="self-end flex gap-4 mt-3">
-           <button 
-             onClick={handleEnterRoom}
-             className="px-4 py-1.5 border border-(--glow) text-(--glow) font-mono text-xs uppercase hover:bg-(--glow) hover:text-black transition-colors shadow-[0_0_10px_rgba(59,130,246,0.2)]"
-           >
-             [ ENTRAR A LA SALA ]
-           </button>
+           {vnState.speaker === 'SISTEMA NAV' && activeUsersCount !== null && activeUsersCount > 0 && (
+             <button 
+               onClick={() => handleEnterRoom(true)}
+               className="px-4 py-1.5 border border-purple-500 text-purple-400 font-mono text-xs uppercase hover:bg-purple-500/20 transition-colors shadow-[0_0_10px_rgba(168,85,247,0.2)]"
+             >
+               [ ESCUCHAR A ESCONDIDAS ]
+             </button>
+           )}
+           
+           {vnState.speaker === 'SISTEMA NAV' && (
+             <button 
+               onClick={() => handleEnterRoom(false)}
+               className="px-4 py-1.5 border border-(--glow) text-(--glow) font-mono text-xs uppercase hover:bg-(--glow) hover:text-black transition-colors shadow-[0_0_10px_rgba(59,130,246,0.2)]"
+             >
+               {activeUsersCount !== null && activeUsersCount > 0 ? '[ ENTRAR NORMALMENTE ]' : '[ ENTRAR A LA SALA ]'}
+             </button>
+           )}
+           
            <button 
              onClick={handleClose}
              className="px-4 py-1.5 border border-red-500/50 text-red-500 font-mono text-xs uppercase hover:bg-red-500/20 transition-colors"
