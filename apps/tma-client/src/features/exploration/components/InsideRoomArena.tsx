@@ -9,6 +9,7 @@ import { useTmaStore } from '@/store/useTmaStore';
 import { createClient } from '@/lib/supabase/client';
 import { CharacterSprite3D } from './CharacterSprite3D';
 import { RoomNavigation } from './RoomNavigation';
+import { TMACharacterData } from '@/features/characters/api';
 
 function RoomCube() {
   return (
@@ -22,7 +23,6 @@ function RoomCube() {
 
 // Fotos temporales de Picsum con soporte CORS para probar DreiImage:
 const PLACEHOLDER_IMG_1 = 'https://picsum.photos/seed/dangan1/400/600';
-const PLACEHOLDER_IMG_2 = 'https://picsum.photos/seed/dangan2/400/600';
 
 // Función auxiliar para esparcir personajes en la sala
 function getPositionForIndex(index: number): [number, number, number] {
@@ -47,23 +47,24 @@ export function InsideRoomArena() {
     
     // Carga inicial
     const fetchChars = async () => {
-      // Obtenemos al usuario local para ocultar su propio cuerpo (First Person Camera)
+      // Obtenemos al personaje local para ocultar su propio cuerpo
       const { data: { user } } = await supabase.auth.getUser();
-      const currentUserId = user?.id;
+      const { data: myChar } = await supabase.from('tma_characters').select('id').eq('user_id', user?.id).limit(1).single();
+      const currentCharacterId = myChar?.id;
 
       const { data } = await supabase.from('tma_characters').select('*').eq('current_room_id', roomId);
       if (data && mounted) {
-        setCharacters(data.filter(c => c.user_id !== currentUserId));
+        setCharacters(data.filter(c => c.id !== currentCharacterId));
       }
       
       // Realtime Suscripción
       const channel = supabase.channel(`room_${roomId}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'tma_characters' }, (payload) => {
-           const char = payload.new as any;
+           const char = payload.new as TMACharacterData | undefined;
            if (!char) return; 
 
            // Jamás renderizamos nuestra propia entidad en 3D
-           if (char.user_id === currentUserId) return;
+           if (char.id === currentCharacterId) return;
 
            if (char.current_room_id === roomId) {
               setCharacters(prev => {

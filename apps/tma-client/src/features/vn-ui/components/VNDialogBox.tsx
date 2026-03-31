@@ -60,10 +60,13 @@ export function VNDialogBox() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      await supabase.from('tma_characters').update({ 
-         current_room_id: selectedRoomId, 
-         is_hidden: isHidden 
-      }).eq('user_id', user.id);
+      const { data: myChar } = await supabase.from('tma_characters').select('id').eq('user_id', user.id).limit(1).single();
+      if (myChar) {
+        await supabase.from('tma_characters').update({ 
+           current_room_id: selectedRoomId, 
+           is_hidden: isHidden 
+        }).eq('id', myChar.id);
+      }
     }
     
     router.push(`/rooms/${selectedRoomId}`);

@@ -16,6 +16,7 @@ interface TmaStoreState {
   // Local Player Context
   investigationPoints: number;
   characterStatus: 'ALIVE' | 'DEAD' | 'MISSING' | 'GUILTY';
+  myCharacterId: string | null;
   
   // Exploration & VN
   selectedRoomId: string | null;
@@ -35,6 +36,7 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
   isBodyDiscoveryActive: false,
   investigationPoints: 7,
   characterStatus: 'ALIVE',
+  myCharacterId: null,
   
   selectedRoomId: null,
   vnState: { isActive: false, speaker: null, text: null },
@@ -48,6 +50,7 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
   setCharacterData: (char) => set({
     investigationPoints: char.investigation_points ?? 7,
     characterStatus: char.status ?? 'ALIVE',
+    myCharacterId: char.id,
   }),
   
   spendInvestigationPoints: (cost) => set((state) => ({
