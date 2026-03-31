@@ -56,7 +56,7 @@ export function InsideRoomArena() {
   return (
     <>
       <div className="w-full h-full absolute inset-0 z-0 bg-black">
-        <Canvas shadows camera={{ position: [0, 0, 0], fov: 60 }}>
+        <Canvas shadows camera={{ position: [0, 1.5, 0.1], fov: 60 }}>
           <color attach="background" args={['#050505']} />
           
           <ambientLight intensity={isNight ? 0.3 : 0.7} color={isNight ? '#ff3333' : '#ffffff'} />
@@ -82,6 +82,7 @@ export function InsideRoomArena() {
           <OrbitControls 
             enableZoom={false}
             enablePan={false}
+            target={[0, 1.5, 0]}
             maxPolarAngle={Math.PI / 2 + 0.05} 
             minPolarAngle={Math.PI / 3} 
             makeDefault 

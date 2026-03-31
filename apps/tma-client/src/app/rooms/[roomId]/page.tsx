@@ -1,7 +1,12 @@
+'use client';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { InsideRoomArena } from '@/features/exploration/components/InsideRoomArena';
 
-export default function RoomPage({ params }: { params: { roomId: string } }) {
+export default function RoomPage() {
+  const params = useParams();
+  const roomId = params?.roomId || 'UNKNOWN_SECTOR';
+
   return (
     <div className="flex flex-col w-full h-screen min-h-screen bg-black text-(--glow) relative overflow-hidden pointer-events-auto">
       {/* Botón Volver (Nervalis) */}
@@ -14,7 +19,7 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
 
       <div className="absolute top-4 right-4 z-50 pointer-events-none">
         <div className="px-6 py-2 border-[1.5px] border-(--glow) bg-black/70 backdrop-blur-md opacity-80 uppercase font-mono text-sm tracking-widest text-(--glow)">
-          CURRENT_ZONE: {params.roomId}
+          CURRENT_ZONE: {roomId}
         </div>
       </div>
 

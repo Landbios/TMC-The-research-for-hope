@@ -34,6 +34,7 @@ export function VNDialogBox() {
 
   const handleEnterRoom = () => {
     if (selectedRoomId) {
+      setVnState({ isActive: false });
       router.push(`/rooms/${selectedRoomId}`);
     }
   };

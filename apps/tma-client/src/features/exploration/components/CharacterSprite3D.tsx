@@ -83,7 +83,6 @@ export function CharacterSprite3D({ id, name, imageUrl, position, onClick, publi
             color="#ffffff"
             outlineColor="#000000"
             outlineWidth={0.03}
-            font="https://fonts.gstatic.com/s/vt323/v17/pxiKyp0ihIEF2isfFJU.woff"
           >
             {name}
           </Text>
@@ -91,17 +90,37 @@ export function CharacterSprite3D({ id, name, imageUrl, position, onClick, publi
           {/* Chat Público en Burbuja 3D */}
           {publicMessage && (
              <group position={[0, 3.5, 0]}>
+               {/* Tronco de Burbuja (Borde Glow) */}
+               <mesh position={[0, 0, -0.01]}>
+                 <planeGeometry args={[Math.min(8, Math.max(3, publicMessage.length * 0.15)) + 0.1, 1.3]} />
+                 <meshBasicMaterial color="#3b82f6" opacity={0.8} transparent />
+               </mesh>
+               {/* Fondo de Burbuja Negro */}
                <mesh>
                  <planeGeometry args={[Math.min(8, Math.max(3, publicMessage.length * 0.15)), 1.2]} />
-                 <meshBasicMaterial color="#ffffff" opacity={0.85} transparent />
+                 <meshBasicMaterial color="#000000" opacity={0.95} transparent />
                </mesh>
+               
+               {/* Sombra del texto */}
                <Text
-                 position={[0, 0, 0.01]}
-                 fontSize={0.3}
+                 position={[-0.02, -0.02, 0.005]}
+                 fontSize={0.25}
                  color="#000000"
                  maxWidth={7.5}
                  textAlign="center"
-                 font="https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZJhjp-Ek-_EeA.woff"
+               >
+                 {publicMessage}
+               </Text>
+               
+               {/* Texto Glow Azul */}
+               <Text
+                 position={[0, 0, 0.01]}
+                 fontSize={0.25}
+                 color="#dbeafe"
+                 outlineColor="#3b82f6"
+                 outlineWidth={0.015}
+                 maxWidth={7.5}
+                 textAlign="center"
                >
                  {publicMessage}
                </Text>
