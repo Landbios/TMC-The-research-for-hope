@@ -34,7 +34,7 @@ function getPositionForIndex(index: number): [number, number, number] {
 export function InsideRoomArena() {
   const params = useParams();
   const roomId = params?.roomId as string;
-  const [characters, setCharacters] = useState<any[]>([]);
+  const [characters, setCharacters] = useState<TMACharacterData[]>([]);
 
   const gamePeriod = useTmaStore((state) => state.gamePeriod);
   const setVnState = useTmaStore((state) => state.setVnState);
@@ -44,6 +44,7 @@ export function InsideRoomArena() {
     if (!roomId || roomId === 'UNKNOWN_SECTOR') return;
     let mounted = true;
     const supabase = createClient();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
     
     // Carga inicial
     const fetchChars = async () => {
@@ -54,11 +55,13 @@ export function InsideRoomArena() {
 
       const { data } = await supabase.from('tma_characters').select('*').eq('current_room_id', roomId);
       if (data && mounted) {
-        setCharacters(data.filter(c => c.id !== currentCharacterId));
+        setCharacters(data.filter(c => c.id !== currentCharacterId) as TMACharacterData[]);
       }
       
-      // Realtime Suscripción
-      const channel = supabase.channel(`room_${roomId}`)
+      if (!mounted) return;
+
+      // Realtime Suscripción (añadimos Timestamp al canal para evitar colisiones en desmontajes con StrictMode)
+      channel = supabase.channel(`room_${roomId}_${Date.now()}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'tma_characters' }, (payload) => {
            const char = payload.new as TMACharacterData | undefined;
            if (!char) return; 
@@ -76,16 +79,15 @@ export function InsideRoomArena() {
            }
         })
         .subscribe();
-        
-      return () => {
-        supabase.removeChannel(channel);
-      };
     };
     
     fetchChars();
 
     return () => {
       mounted = false;
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
   }, [roomId]);
 
