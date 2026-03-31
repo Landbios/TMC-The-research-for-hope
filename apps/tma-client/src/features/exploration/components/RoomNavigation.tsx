@@ -21,10 +21,11 @@ export function RoomNavigation() {
     const supabase = createClient();
     
     await supabase.from('tma_messages').insert({
-       room_id: roomId,
-       character_id: myCharacterId,
+       tma_room_id: roomId,
+       sender_tma_id: myCharacterId,
        content: text.trim(),
-       message_type: 'public'
+       is_whisper: false,
+       is_system_message: false
     });
     
     setText('');

@@ -82,13 +82,13 @@ export function InsideRoomArena() {
 
       // Realtime Mensajes (Burbujas Flotantes)
       supabase.channel(`chat_${roomId}_${Date.now()}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tma_messages', filter: `room_id=eq.${roomId}` }, (payload) => {
-           const msg = payload.new as { message_type: string; character_id: string; content: string } | undefined;
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tma_messages', filter: `tma_room_id=eq.${roomId}` }, (payload) => {
+           const msg = payload.new as { is_whisper: boolean; is_system_message: boolean; sender_tma_id: string; content: string } | undefined;
            if (!msg) return; 
 
-           if (msg.message_type === 'public' && msg.character_id !== currentCharacterId) {
+           if (!msg.is_whisper && !msg.is_system_message && msg.sender_tma_id !== currentCharacterId) {
               setCharacters(prev => prev.map(c => {
-                 if (c.id === msg.character_id) {
+                 if (c.id === msg.sender_tma_id) {
                     return { ...c, publicMessage: msg.content };
                  }
                  return c;
@@ -97,7 +97,7 @@ export function InsideRoomArena() {
               setTimeout(() => {
                  if (!mounted) return;
                  setCharacters(prev => prev.map(c => {
-                    if (c.id === msg.character_id && c.publicMessage === msg.content) {
+                    if (c.id === msg.sender_tma_id && c.publicMessage === msg.content) {
                        return { ...c, publicMessage: undefined };
                     }
                     return c;
