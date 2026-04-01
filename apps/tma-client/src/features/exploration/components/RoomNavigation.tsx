@@ -5,12 +5,18 @@ import { useTmaStore } from '@/store/useTmaStore';
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { TMACharacterData } from '@/features/characters/api';
 
-export function RoomNavigation() {
+interface RoomNavigationProps {
+  characters?: TMACharacterData[];
+}
+
+export function RoomNavigation({ characters = [] }: RoomNavigationProps) {
   const vnState = useTmaStore(state => state.vnState);
   const myCharacterId = useTmaStore(state => state.myCharacterId);
   
   const [text, setText] = useState('');
+  const [targetId, setTargetId] = useState<string>('');
   const [isSending, setIsSending] = useState(false);
   const params = useParams();
   const roomId = params?.roomId as string;
@@ -20,13 +26,19 @@ export function RoomNavigation() {
     setIsSending(true);
     const supabase = createClient();
     
-    await supabase.from('tma_messages').insert({
+    const { error } = await supabase.from('tma_messages').insert({
        tma_room_id: roomId,
        sender_tma_id: myCharacterId,
+       target_tma_id: targetId || null,
        content: text.trim(),
-       is_whisper: false,
+       is_whisper: !!targetId,
        is_system_message: false
     });
+    
+    if (error) {
+       console.error("Supabase Insert Error:", error);
+       alert("Error enviando el mensaje: " + error.message);
+    }
     
     setText('');
     setIsSending(false);
@@ -40,13 +52,39 @@ export function RoomNavigation() {
       {/* Caja de enviar chat público con burbuja flotante en 3D */}
       {!vnState.isActive && (
          <div className="absolute bottom-6 md:bottom-8 right-6 pointer-events-auto flex items-stretch gap-2 animate-fade-in-up">
+           
+           {/* Selector de Objetivo (Susurros) */}
+           <div className="flex gap-1">
+             <select
+               value={targetId}
+               onChange={(e) => setTargetId(e.target.value)}
+               className="px-2 py-2 bg-black/70 backdrop-blur border border-(--glow) font-mono text-[9px] uppercase shadow-[0_0_15px_rgba(59,130,246,0.2)] text-(--glow) outline-none md:w-[150px] cursor-pointer"
+               title="Seleccionar Canal"
+             >
+               <option value="">🗣️ PÚBLICO (SALA)</option>
+               {characters.map(c => (
+                  <option key={c.id} value={c.id}>Susurro: {c.tma_name}</option>
+               ))}
+             </select>
+             
+             {targetId && (
+               <button 
+                 onClick={() => setTargetId('')}
+                 className="px-3 border border-red-500/50 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-black transition-colors font-mono tracking-wider font-bold shadow-[0_0_15px_rgba(239,68,68,0.2)] cursor-pointer text-xs"
+                 title="Cancelar Susurro"
+               >
+                 X
+               </button>
+             )}
+           </div>
+
            <input 
              type="text" 
              value={text}
              onChange={e => setText(e.target.value)}
              onKeyDown={e => e.key === 'Enter' && handleSend()}
-             placeholder="Hablar en la sala..." 
-             className="px-4 py-2 bg-black/70 backdrop-blur border border-(--glow) font-mono text-xs md:text-sm shadow-[0_0_15px_rgba(59,130,246,0.2)] text-(--glow) outline-none w-[250px] md:w-[350px] disabled:opacity-50"
+             placeholder={targetId ? "Susurrar mensaje privado..." : "Hablar al resto de la sala..."}
+             className="px-4 py-2 bg-black/70 backdrop-blur border border-(--glow) font-mono text-xs md:text-sm shadow-[0_0_15px_rgba(59,130,246,0.2)] text-(--glow) outline-none w-[200px] md:w-[350px] disabled:opacity-50"
              disabled={isSending}
             />
             <button 

@@ -222,9 +222,18 @@ body {
 }
 
 @keyframes glitch-anim-2 {
-  0% { clip-path: polygon(0 60%, 100% 60%, 100% 65%, 0 65%); opacity: 1; transform: translate(2px, -1px); }
+  0% { clip-path: polygon(0 10%, 100% 10%, 100% 15%, 0 15%); opacity: 1; content: attr(data-text); transform: translate(2px, -2px); }
   2% { clip-path: polygon(0 80%, 100% 80%, 100% 80%, 0 80%); opacity: 1; transform: translate(-2px, 1px); }
   4% { opacity: 0; }
   98% { opacity: 0; }
-  100% { clip-path: polygon(0 10%, 100% 10%, 100% 15%, 0 15%); opacity: 1; content: attr(data-text); transform: translate(2px, -2px); }
+  100% { clip-path: polygon(0 60%, 100% 60%, 100% 65%, 0 65%); opacity: 1; transform: translate(2px, -1px); }
+}
+
+@keyframes glitchLine {
+  0% { top: -10%; }
+  100% { top: 110%; }
+}
+
+.animate-glitch-line {
+  animation: glitchLine 2s linear infinite;
 }

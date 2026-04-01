@@ -11,6 +11,14 @@ export interface CharacterData {
   created_at?: string;
 }
 
+export interface TMAProfile {
+  id: string;
+  email: string | null;
+  role: 'roleplayer' | 'staff' | 'superadmin';
+  username: string | null;
+  created_at: string;
+}
+
 export interface TMACharacterData {
   id: string;
   user_id: string;
@@ -102,4 +110,24 @@ export async function getGameState(): Promise<TMAGameState | null> {
   }
 
   return data as TMAGameState;
+}
+
+// Obtiene el perfil del usuario actual (incluyendo el rol)
+export async function getUserProfile(): Promise<TMAProfile | null> {
+  const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data as TMAProfile;
 }

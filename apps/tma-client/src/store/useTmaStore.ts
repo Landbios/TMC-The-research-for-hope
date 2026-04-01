@@ -21,6 +21,7 @@ interface TmaStoreState {
   // Exploration & VN
   selectedRoomId: string | null;
   vnState: VNState;
+  vnWhispers: import('@/features/vn-ui/components/VNChatOverlay').VNChatMessage[];
 
   // Actions
   setGameState: (state: TMAGameState) => void;
@@ -28,6 +29,8 @@ interface TmaStoreState {
   spendInvestigationPoints: (cost: number) => void;
   setSelectedRoomId: (id: string | null) => void;
   setVnState: (state: Partial<VNState>) => void;
+  addVnWhisper: (msg: import('@/features/vn-ui/components/VNChatOverlay').VNChatMessage) => void;
+  clearVnWhispers: () => void;
 }
 
 export const useTmaStore = create<TmaStoreState>((set) => ({
@@ -40,6 +43,7 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
   
   selectedRoomId: null,
   vnState: { isActive: false, speaker: null, text: null },
+  vnWhispers: [],
   
   setGameState: (state) => set({
     gamePeriod: state.current_period,
@@ -58,5 +62,7 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
   })),
 
   setSelectedRoomId: (id) => set({ selectedRoomId: id }),
-  setVnState: (patch) => set((state) => ({ vnState: { ...state.vnState, ...patch } }))
+  setVnState: (patch) => set((state) => ({ vnState: { ...state.vnState, ...patch } })),
+  addVnWhisper: (msg) => set((state) => ({ vnWhispers: [...state.vnWhispers, msg] })),
+  clearVnWhispers: () => set({ vnWhispers: [] })
 }));

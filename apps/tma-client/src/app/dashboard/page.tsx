@@ -1,4 +1,4 @@
-import { getTMACharacter, getGameState } from '@/features/characters/api';
+import { getTMACharacter, getGameState, getUserProfile } from '@/features/characters/api';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -9,10 +9,13 @@ import { DashboardHudStats } from '@/features/dashboard/components/DashboardHudS
 export default async function DashboardPage() {
   const character = await getTMACharacter();
   const gameState = await getGameState();
+  const profile = await getUserProfile();
 
   if (!character) {
     redirect('/dashboard/enroll');
   }
+
+  const isAdmin = profile?.role === 'staff' || profile?.role === 'superadmin';
 
   // Fallbacks for data from the Vault or Custom TMA inputs
   const finalName = character.tmc_character?.name || character.tma_name || 'UNKNOWN SUBJECT';
@@ -205,10 +208,22 @@ export default async function DashboardPage() {
 
       {/* ACCESS BUTTON */}
       <div className="pt-8 text-center flex flex-col items-center gap-4 w-full">
-         <button className="px-10 py-3 bg-(--glow)/10 text-(--glow) font-mono text-xs tracking-widest uppercase border border-(--glow) hover:bg-(--glow) hover:text-black hover:shadow-[0_0_20px_var(--glow)] transition-all flex items-center gap-2">
-           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
-           Init System (Acceder)
-         </button>
+         {isAdmin ? (
+           <Link 
+             href="/admin"
+             className="px-10 py-3 bg-red-500/10 text-red-500 font-mono text-xs tracking-widest uppercase border border-red-500/50 hover:bg-red-600 hover:text-white hover:shadow-[0_0_25px_rgba(239,68,68,0.5)] transition-all flex items-center gap-2 group relative overflow-hidden"
+           >
+             <div className="absolute inset-0 bg-red-500/20 -translate-x-full group-hover:translate-x-full transition-transform duration-500 pointer-events-none" />
+             <svg className="w-4 h-4 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+             <span className="relative z-10">OVERRIDE SYSTEM (MÁSTER)</span>
+             <div className="absolute top-0 left-0 w-full h-px bg-red-500/50 animate-glitch-line" />
+           </Link>
+         ) : (
+           <button className="px-10 py-3 bg-(--glow)/10 text-(--glow) font-mono text-xs tracking-widest uppercase border border-(--glow) hover:bg-(--glow) hover:text-black hover:shadow-[0_0_20px_var(--glow)] transition-all flex items-center gap-2">
+             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+             Init System (Acceder)
+           </button>
+         )}
       </div>
 
     </div>

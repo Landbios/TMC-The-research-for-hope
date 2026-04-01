@@ -34,3 +34,9 @@ VALUES
   ('Habitaciones', 'Pasillos silenciosos. Nadie puede cruzar tu puerta si no tiene llave.'),
   ('Capilla', 'Suntuosa e irónica. Las campanas de desesperación suenan aquí.')
 ON CONFLICT DO NOTHING; -- No duplicar si ya existen
+
+-- 4. Actualización de tma_evidences (Añadimos coordenadas para el Motor 3D)
+ALTER TABLE public.tma_evidences
+ADD COLUMN IF NOT EXISTS pos_x numeric DEFAULT 0.0,
+ADD COLUMN IF NOT EXISTS pos_y numeric DEFAULT 0.0,
+ADD COLUMN IF NOT EXISTS pos_z numeric DEFAULT 0.0;

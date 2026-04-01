@@ -2,7 +2,6 @@
 
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import * as THREE from 'three';
 import { Suspense, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useTmaStore } from '@/store/useTmaStore';
@@ -10,16 +9,8 @@ import { createClient } from '@/lib/supabase/client';
 import { CharacterSprite3D } from './CharacterSprite3D';
 import { RoomNavigation } from './RoomNavigation';
 import { TMACharacterData } from '@/features/characters/api';
-
-function RoomCube() {
-  return (
-    <mesh>
-      <boxGeometry args={[40, 15, 40]} />
-      <meshStandardMaterial color="#1f2331" side={THREE.BackSide} roughness={0.9} />
-      <gridHelper args={[40, 40, '#000000', '#111111']} position={[0, -7.49, 0]} />
-    </mesh>
-  );
-}
+import { VNChatOverlay } from '@/features/vn-ui/components/VNChatOverlay';
+import { RoomCube } from './RoomCube';
 
 // Fotos temporales de Picsum con soporte CORS para probar DreiImage:
 const PLACEHOLDER_IMG_1 = 'https://picsum.photos/seed/dangan1/400/600';
@@ -38,6 +29,10 @@ export function InsideRoomArena() {
 
   const gamePeriod = useTmaStore((state) => state.gamePeriod);
   const setVnState = useTmaStore((state) => state.setVnState);
+  const addVnWhisper = useTmaStore((state) => state.addVnWhisper);
+  const vnWhispers = useTmaStore((state) => state.vnWhispers);
+  const clearVnWhispers = useTmaStore((state) => state.clearVnWhispers);
+  
   const isNight = gamePeriod === 'NIGHTTIME';
 
   useEffect(() => {
@@ -50,8 +45,12 @@ export function InsideRoomArena() {
     const fetchChars = async () => {
       // Obtenemos al personaje local para ocultar su propio cuerpo
       const { data: { user } } = await supabase.auth.getUser();
-      const { data: myChar } = await supabase.from('tma_characters').select('id').eq('user_id', user?.id).limit(1).single();
-      const currentCharacterId = myChar?.id;
+      const { data: myCharData } = await supabase.from('tma_characters').select('*').eq('user_id', user?.id).limit(1).single();
+      const currentCharacterId = myCharData?.id;
+      
+      if (myCharData) {
+         useTmaStore.getState().setCharacterData(myCharData as TMACharacterData);
+      }
 
       const { data } = await supabase.from('tma_characters').select('*').eq('current_room_id', roomId);
       if (data && mounted) {
@@ -80,13 +79,68 @@ export function InsideRoomArena() {
          })
         .subscribe();
 
-      // Realtime Mensajes (Burbujas Flotantes)
+      // Realtime Mensajes (Burbujas Flotantes y Susurros VN)
       supabase.channel(`chat_${roomId}_${Date.now()}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tma_messages', filter: `tma_room_id=eq.${roomId}` }, (payload) => {
-           const msg = payload.new as { is_whisper: boolean; is_system_message: boolean; sender_tma_id: string; content: string } | undefined;
+           const msg = payload.new as {
+              id: string;
+              is_whisper: boolean;
+              is_system_message: boolean;
+              sender_tma_id: string;
+              target_tma_id?: string;
+              content: string;
+           } | undefined;
            if (!msg) return; 
 
-           if (!msg.is_whisper && !msg.is_system_message && msg.sender_tma_id !== currentCharacterId) {
+           // Validamos si es nuestro susurro o para nosotros (sistema o target)
+           const isForMeOrByMe = msg.sender_tma_id === currentCharacterId || msg.target_tma_id === currentCharacterId || !msg.target_tma_id;
+           
+           if (msg.is_whisper && isForMeOrByMe) {
+              // Recuperar info del remitente
+              let senderName = 'Sistema';
+              let spriteUrl: string | undefined = undefined;
+              
+              if (msg.sender_tma_id === currentCharacterId && myCharData) {
+                 senderName = myCharData.tma_name || 'Yo';
+                 spriteUrl = myCharData.sprite_idle_url || myCharData.image_url;
+              } else {
+                 // Buscar en store
+                 setCharacters(prev => {
+                    const found = prev.find(c => c.id === msg.sender_tma_id);
+                    if (found) {
+                       senderName = found.tma_name || 'Desconocido';
+                       spriteUrl = found.sprite_idle_url || found.image_url;
+                    }
+                    setTimeout(() => {
+                      if (!mounted) return;
+                      addVnWhisper({
+                         id: msg.id,
+                         sender_tma_id: msg.sender_tma_id,
+                         sender_name: senderName,
+                         target_tma_id: msg.target_tma_id,
+                         content: msg.content,
+                         is_whisper: msg.is_whisper,
+                         is_system_message: msg.is_system_message,
+                         sprite_url: spriteUrl
+                      });
+                    }, 0);
+                    return prev;
+                 });
+                 return; // Evitamos añadir aqui porque lo hacemos en el timeout con el estado actualizado
+              }
+              
+              addVnWhisper({
+                 id: msg.id,
+                 sender_tma_id: msg.sender_tma_id,
+                 sender_name: senderName,
+                 target_tma_id: msg.target_tma_id,
+                 content: msg.content,
+                 is_whisper: msg.is_whisper,
+                 is_system_message: msg.is_system_message,
+                 sprite_url: spriteUrl
+              });
+           }
+           else if (!msg.is_whisper && !msg.is_system_message && msg.sender_tma_id !== currentCharacterId) {
               setCharacters(prev => prev.map(c => {
                  if (c.id === msg.sender_tma_id) {
                     return { ...c, publicMessage: msg.content };
@@ -118,7 +172,7 @@ export function InsideRoomArena() {
       // Automáticamente cerramos todos los canales de Supabase cuando se desmonta la arena entera
       supabase.removeAllChannels();
     };
-  }, [roomId]);
+  }, [roomId, addVnWhisper]);
 
   // Iniciar susurro/chat visual novel con un personaje clickeado
   const handleCharacterClick = (id: string, name: string) => {
@@ -169,8 +223,13 @@ export function InsideRoomArena() {
       
       {/* UI Inferior de Interacción VN del Cuarto */}
       <Suspense fallback={null}>
-        <RoomNavigation />
+        <RoomNavigation characters={characters} />
       </Suspense>
+      
+      {/* Visual Novel Whispers Overlay */}
+      {vnWhispers.length > 0 && (
+         <VNChatOverlay messages={vnWhispers} onClose={clearVnWhispers} />
+      )}
     </>
   );
 }
