@@ -5,6 +5,9 @@ import Image from 'next/image';
 import { Battery } from 'lucide-react';
 import { TmaStoreInitializer } from '@/components/TmaStoreInitializer';
 import { DashboardHudStats } from '@/features/dashboard/components/DashboardHudStats';
+import { DashboardPistasButton } from '@/features/dashboard/components/DashboardPistasButton';
+import { PollRealtimeListener } from '@/features/investigation/components/PollRealtimeListener';
+import { GlobalPollOverlay } from '@/features/dashboard/components/GlobalPollOverlay';
 
 export default async function DashboardPage() {
   const character = await getTMACharacter();
@@ -30,6 +33,8 @@ export default async function DashboardPage() {
   return (
     <div className="flex flex-col items-center justify-center w-full max-w-6xl mx-auto h-full animate-fade-in relative pt-0 md:pt-4">
       <TmaStoreInitializer character={character} gameState={gameState} />
+      <PollRealtimeListener />
+      <GlobalPollOverlay />
 
       {/* Pantalla CRT global */}
       <div className="fixed inset-0 crt-scanline pointer-events-none" />
@@ -178,18 +183,8 @@ export default async function DashboardPage() {
                  <div className="w-full h-px bg-(--glow)/50 absolute bottom-3 left-0"><div className="w-1.5 h-1.5 bg-(--glow) absolute -top-[2px] left-2 rounded-full" /></div>
                </button>
 
-               {/* BTN 4: Pistas */}
-               <button className="sci-border p-2 flex flex-col items-center justify-center hover:bg-(--glow)/5 transition-colors group relative h-full min-h-[140px]">
-                 <span className="font-mono text-[9px] opacity-80 self-start absolute top-2 left-2"> [ PISTAS ] </span>
-                 <div className="relative mt-4">
-                   <svg className="w-12 h-12 stroke-(--glow) opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all" viewBox="0 0 24 24" fill="none">
-                     <circle cx="11" cy="11" r="8" strokeWidth="1.5" />
-                     <line x1="16.5" y1="16.5" x2="22" y2="22" strokeWidth="2" strokeLinecap="round" />
-                     <path d="M6,11 L8.5,11 L9.5,8 L11.5,15 L12.5,11 L16,11" strokeWidth="1.5" stroke="#4ade80" strokeLinejoin="round" />
-                   </svg>
-                 </div>
-                 <div className="w-full h-px bg-(--glow)/50 absolute bottom-3 right-0"><div className="w-1.5 h-1.5 bg-(--glow) absolute -top-[2px] right-2 rounded-full" /></div>
-               </button>
+               {/* BTN 4: Pistas (Reactive) */}
+               <DashboardPistasButton />
 
              </div>
           </div>

@@ -27,7 +27,10 @@ export async function updateEvidencePosition(evidenceId: string, x: number, y: n
 export async function createTmaEvidence(evidence: {
   room_id: string;
   title: string;
-  description: string;
+  description_brief?: string;
+  description_full?: string;
+  image_url?: string;
+  is_fake?: boolean;
   investigation_cost?: number;
   pos_x?: number;
   pos_y?: number;

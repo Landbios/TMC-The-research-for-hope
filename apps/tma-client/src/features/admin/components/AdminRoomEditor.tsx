@@ -11,7 +11,10 @@ interface Evidence {
   id: string;
   room_id: string;
   title: string;
-  description: string;
+  description_brief?: string;
+  description_full?: string;
+  image_url?: string;
+  is_fake?: boolean;
   pos_x: number;
   pos_y: number;
   pos_z: number;
@@ -27,7 +30,16 @@ export function AdminRoomEditor() {
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [evidences, setEvidences] = useState<Evidence[]>([]);
   const [isAdding, setIsAdding] = useState(false);
-  const [newEvidence, setNewEvidence] = useState({ title: '', description: '', pos_x: 0, pos_y: 0, pos_z: 0 });
+  const [newEvidence, setNewEvidence] = useState({ 
+    title: '', 
+    description_brief: '', 
+    description_full: '', 
+    image_url: '', 
+    is_fake: false,
+    pos_x: 0, 
+    pos_y: 0, 
+    pos_z: 0 
+  });
 
   useEffect(() => {
     getAllRooms().then(setRooms);
@@ -50,7 +62,16 @@ export function AdminRoomEditor() {
     try {
       await createTmaEvidence({ ...newEvidence, room_id: selectedRoomId });
       setIsAdding(false);
-      setNewEvidence({ title: '', description: '', pos_x: 0, pos_y: 0, pos_z: 0 });
+      setNewEvidence({ 
+        title: '', 
+        description_brief: '', 
+        description_full: '', 
+        image_url: '', 
+        is_fake: false,
+        pos_x: 0, 
+        pos_y: 0, 
+        pos_z: 0 
+      });
       getRoomEvidences(selectedRoomId).then(setEvidences);
     } catch {
       alert('Error guardando evidencia');
@@ -134,34 +155,77 @@ export function AdminRoomEditor() {
             
             {/* Formulario de Nueva Evidencia (Overlay) */}
             {isAdding && (
-              <div className="absolute top-4 right-4 w-64 bg-black/90 p-4 border border-white/30 backdrop-blur shadow-xl animate-fade-in z-20">
-                 <h4 className="font-mono text-xs border-b border-white/20 pb-2 mb-4 flex items-center gap-2">
-                    <MapPin size={12} className="text-white" /> REGISTRAR PISTA
+              <div className="absolute top-4 right-4 w-80 bg-black/95 p-4 border border-red-500/30 backdrop-blur shadow-2xl animate-fade-in z-20 max-h-[90%] overflow-y-auto custom-scrollbar">
+                 <h4 className="font-mono text-xs border-b border-red-500/20 pb-2 mb-4 flex items-center gap-2 text-red-500">
+                    <MapPin size={12} /> PROTOCOLO DE REGISTRO
                  </h4>
                  <div className="space-y-4">
-                    <input 
-                      type="text" 
-                      placeholder="Título de la prueba..."
-                      className="w-full bg-transparent border-b border-white/40 font-mono text-xs p-1 outline-none text-white focus:border-white"
-                      value={newEvidence.title}
-                      onChange={e => setNewEvidence(prev => ({ ...prev, title: e.target.value }))}
-                    />
-                    <textarea 
-                      placeholder="Descripción detallada..."
-                      className="w-full bg-transparent border border-white/20 font-mono text-[10px] p-2 h-24 outline-none text-white/80 focus:border-white/50"
-                      value={newEvidence.description}
-                      onChange={e => setNewEvidence(prev => ({ ...prev, description: e.target.value }))}
-                    />
-                    <div className="grid grid-cols-3 gap-1 text-[9px] font-mono text-white/50">
+                    <div className="space-y-1">
+                      <label className="font-mono text-[9px] uppercase opacity-50">Título</label>
+                      <input 
+                        type="text" 
+                        placeholder="Nombre de la pista..."
+                        className="w-full bg-zinc-900 border border-zinc-800 font-mono text-xs p-2 outline-none text-white focus:border-red-500/50"
+                        value={newEvidence.title}
+                        onChange={e => setNewEvidence(prev => ({ ...prev, title: e.target.value }))}
+                      />
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <label className="font-mono text-[9px] uppercase opacity-50">URL Imagen</label>
+                      <input 
+                        type="text" 
+                        placeholder="https://..."
+                        className="w-full bg-zinc-900 border border-zinc-800 font-mono text-xs p-2 outline-none text-white focus:border-red-500/50"
+                        value={newEvidence.image_url}
+                        onChange={e => setNewEvidence(prev => ({ ...prev, image_url: e.target.value }))}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-mono text-[9px] uppercase opacity-50">Descripción Breve (Pre-Consenso)</label>
+                      <textarea 
+                        placeholder="Lo que ven antes de votar..."
+                        className="w-full bg-zinc-900 border border-zinc-800 font-mono text-[10px] p-2 h-16 outline-none text-white/80 focus:border-red-500/50"
+                        value={newEvidence.description_brief}
+                        onChange={e => setNewEvidence(prev => ({ ...prev, description_brief: e.target.value }))}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-mono text-[9px] uppercase opacity-50">Descripción Detallada (Log Post-Consenso)</label>
+                      <textarea 
+                        placeholder="Toda la verdad sobre esta pista..."
+                        className="w-full bg-zinc-900 border border-zinc-800 font-mono text-[10px] p-2 h-24 outline-none text-white/80 focus:border-red-500/50"
+                        value={newEvidence.description_full}
+                        onChange={e => setNewEvidence(prev => ({ ...prev, description_full: e.target.value }))}
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-3 p-2 bg-red-500/5 border border-red-500/20">
+                      <input 
+                        type="checkbox" 
+                        id="is_fake"
+                        checked={newEvidence.is_fake}
+                        onChange={e => setNewEvidence(prev => ({ ...prev, is_fake: e.target.checked }))}
+                        className="accent-red-500"
+                      />
+                      <label htmlFor="is_fake" className="font-mono text-[10px] text-red-500 uppercase cursor-pointer select-none">
+                        ¿Pista Falsa / Basura?
+                      </label>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-1 text-[9px] font-mono text-white/30 p-1 border-t border-white/10 mt-2">
                        <span>X: {newEvidence.pos_x.toFixed(2)}</span>
                        <span>Y: {newEvidence.pos_y.toFixed(2)}</span>
                        <span>Z: {newEvidence.pos_z.toFixed(2)}</span>
                     </div>
+
                     <button 
                       onClick={handleSaveNew}
-                      className="w-full py-2 bg-white text-black font-mono text-xs uppercase font-bold hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
+                      className="w-full py-2 bg-red-600 text-white font-mono text-xs uppercase font-bold hover:bg-red-500 transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(220,38,38,0.3)]"
                     >
-                      <Save size={14} /> PERSISTIR EN DB
+                      <Save size={14} /> MATERIALIZAR EVIDENCIA
                     </button>
                  </div>
               </div>

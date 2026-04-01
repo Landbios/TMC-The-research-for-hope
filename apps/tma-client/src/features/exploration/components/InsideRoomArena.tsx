@@ -11,6 +11,9 @@ import { RoomNavigation } from './RoomNavigation';
 import type { TMACharacterData } from '@/features/characters/api';
 import { VNChatOverlay } from '@/features/vn-ui/components/VNChatOverlay';
 import { RoomCube } from './RoomCube';
+import { EvidenceSprite3D } from './EvidenceSprite3D';
+import { ClueDiscoveryDialog } from '@/features/investigation/components/ClueDiscoveryDialog';
+import { getRoomClues, TMAEvidence } from '@/features/investigation/api';
 
 // Fotos temporales de Picsum con soporte CORS para probar DreiImage:
 const PLACEHOLDER_IMG_1 = 'https://picsum.photos/seed/dangan1/400/600';
@@ -26,6 +29,8 @@ export function InsideRoomArena() {
   const params = useParams();
   const roomId = params?.roomId as string;
   const [characters, setCharacters] = useState<TMACharacterData[]>([]);
+  const [clues, setClues] = useState<TMAEvidence[]>([]);
+  const [selectedClue, setSelectedClue] = useState<TMAEvidence | null>(null);
 
   const gamePeriod = useTmaStore((state) => state.gamePeriod);
   const setVnState = useTmaStore((state) => state.setVnState);
@@ -55,6 +60,12 @@ export function InsideRoomArena() {
       const { data } = await supabase.from('tma_characters').select('*').eq('current_room_id', roomId);
       if (data && mounted) {
         setCharacters(data.filter(c => c.id !== currentCharacterId) as TMACharacterData[]);
+      }
+
+      // Carga de pistas
+      if (mounted) {
+        const roomClues = await getRoomClues(roomId);
+        setClues(roomClues);
       }
       
       if (!mounted) return;
@@ -208,6 +219,16 @@ export function InsideRoomArena() {
                 />
               </Suspense>
             ))}
+
+            {/* Renderizar Pistas (Clues) */}
+            {clues.map((clue) => (
+              <Suspense key={clue.id} fallback={null}>
+                <EvidenceSprite3D 
+                  evidence={clue} 
+                  onClick={(ev) => setSelectedClue(ev)} 
+                />
+              </Suspense>
+            ))}
           </Suspense>
 
           <OrbitControls 
@@ -229,6 +250,14 @@ export function InsideRoomArena() {
       {/* Visual Novel Whispers Overlay */}
       {vnWhispers.length > 0 && (
          <VNChatOverlay messages={vnWhispers} onClose={clearVnWhispers} />
+      )}
+
+      {/* Dialogo de Descubrimiento de Pistas */}
+      {selectedClue && (
+        <ClueDiscoveryDialog 
+          evidence={selectedClue} 
+          onClose={() => setSelectedClue(null)} 
+        />
       )}
     </>
   );

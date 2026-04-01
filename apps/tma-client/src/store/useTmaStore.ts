@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { TMAGamePeriod, TMAGameState, TMACharacterData } from '@/features/characters/api';
+import type { TMAEvidencePoll } from '@/features/investigation/api';
 
 interface VNState {
   isActive: boolean;
@@ -23,6 +24,9 @@ interface TmaStoreState {
   vnState: VNState;
   vnWhispers: import('@/features/vn-ui/components/VNChatOverlay').VNChatMessage[];
 
+  // Investigation Polls
+  activePoll: TMAEvidencePoll | null;
+
   // Actions
   setGameState: (state: TMAGameState) => void;
   setCharacterData: (char: TMACharacterData) => void;
@@ -31,6 +35,7 @@ interface TmaStoreState {
   setVnState: (state: Partial<VNState>) => void;
   addVnWhisper: (msg: import('@/features/vn-ui/components/VNChatOverlay').VNChatMessage) => void;
   clearVnWhispers: () => void;
+  setActivePoll: (poll: TMAEvidencePoll | null) => void;
 }
 
 export const useTmaStore = create<TmaStoreState>((set) => ({
@@ -44,7 +49,8 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
   selectedRoomId: null,
   vnState: { isActive: false, speaker: null, text: null },
   vnWhispers: [],
-  
+  activePoll: null,
+
   setGameState: (state) => set({
     gamePeriod: state.current_period,
     motive: state.current_motive,
@@ -64,5 +70,6 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
   setSelectedRoomId: (id) => set({ selectedRoomId: id }),
   setVnState: (patch) => set((state) => ({ vnState: { ...state.vnState, ...patch } })),
   addVnWhisper: (msg) => set((state) => ({ vnWhispers: [...state.vnWhispers, msg] })),
-  clearVnWhispers: () => set({ vnWhispers: [] })
+  clearVnWhispers: () => set({ vnWhispers: [] }),
+  setActivePoll: (poll) => set({ activePoll: poll })
 }));
