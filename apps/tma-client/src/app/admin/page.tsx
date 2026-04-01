@@ -1,9 +1,9 @@
-import { getUserProfile } from '@/features/characters/api';
+import { getUserProfileServer } from '@/features/characters/server-api';
 import { redirect } from 'next/navigation';
 import { AdminDashboard } from '@/features/admin/components/AdminDashboard';
 
 export default async function AdminPage() {
-  const profile = await getUserProfile();
+  const profile = await getUserProfileServer();
 
   // Verificación de rol: solo staff y superadmin
   if (!profile || (profile.role !== 'staff' && profile.role !== 'superadmin')) {

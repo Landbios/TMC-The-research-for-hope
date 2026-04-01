@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Shield, Users, Map as MapIcon, Database } from 'lucide-react';
 import { AdminRoomEditor } from './AdminRoomEditor';
 import { getAllVolunteers } from '../api';
-import { TMACharacterData } from '@/features/characters/api';
+import type { TMACharacterData } from '@/features/characters/api';
 
 
 interface AdminDashboardProps {

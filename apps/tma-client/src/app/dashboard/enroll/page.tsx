@@ -1,4 +1,4 @@
-import { getVaultCharacters } from '@/features/characters/api';
+import { getVaultCharactersServer as getVaultCharacters } from '@/features/characters/server-api';
 import EnrollClientForm from './EnrollClientForm';
 
 export default async function EnrollPage() {

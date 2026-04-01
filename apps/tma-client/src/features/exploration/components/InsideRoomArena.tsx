@@ -8,7 +8,7 @@ import { useTmaStore } from '@/store/useTmaStore';
 import { createClient } from '@/lib/supabase/client';
 import { CharacterSprite3D } from './CharacterSprite3D';
 import { RoomNavigation } from './RoomNavigation';
-import { TMACharacterData } from '@/features/characters/api';
+import type { TMACharacterData } from '@/features/characters/api';
 import { VNChatOverlay } from '@/features/vn-ui/components/VNChatOverlay';
 import { RoomCube } from './RoomCube';
 

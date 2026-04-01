@@ -92,39 +92,41 @@ export function AdminRoomEditor() {
           </div>
         ) : (
           <div className="w-full h-full">
-            <Canvas shadows camera={{ position: [0, 5, 20], fov: 60 }} onPointerDown={handleCanvasClick}>
+            <Canvas shadows camera={{ position: [0, 5, 20], fov: 60 }}>
               <color attach="background" args={['#050000']} />
               <ambientLight intensity={0.5} />
               <pointLight position={[10, 10, 10]} intensity={1} color="#ff3333" />
               
               <Suspense fallback={null}>
-                <RoomCube />
-                
-                {/* Marcadores de Evidencia Existente */}
-                {evidences.map(ev => (
-                  <mesh key={ev.id} position={[ev.pos_x, ev.pos_y, ev.pos_z]}>
-                    <sphereGeometry args={[0.3, 16, 16]} />
-                    <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={0.5} />
-                    <Html distanceFactor={10}>
-                      <div className="bg-red-600 text-white px-2 py-1 text-[8px] font-mono whitespace-nowrap shadow-[0_0_10px_red]">
-                        {ev.title}
-                      </div>
-                    </Html>
-                  </mesh>
-                ))}
+                <group onPointerDown={handleCanvasClick}>
+                  <RoomCube />
+                  
+                  {/* Marcadores de Evidencia Existente */}
+                  {evidences.map(ev => (
+                    <mesh key={ev.id} position={[ev.pos_x, ev.pos_y, ev.pos_z]}>
+                      <sphereGeometry args={[0.3, 16, 16]} />
+                      <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={0.5} />
+                      <Html distanceFactor={10}>
+                        <div className="bg-red-600 text-white px-2 py-1 text-[8px] font-mono whitespace-nowrap shadow-[0_0_10px_red]">
+                          {ev.title}
+                        </div>
+                      </Html>
+                    </mesh>
+                  ))}
 
-                {/* Marcador de Nueva Evidencia */}
-                {isAdding && (
-                  <mesh position={[newEvidence.pos_x, newEvidence.pos_y, newEvidence.pos_z]}>
-                    <sphereGeometry args={[0.5, 16, 16]} />
-                    <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={1} />
-                    <Html distanceFactor={10}>
-                      <div className="bg-white text-black px-2 py-1 text-[8px] font-mono whitespace-nowrap shadow-[0_0_15px_white] animate-pulse">
-                        POSICIÓN NUEVA
-                      </div>
-                    </Html>
-                  </mesh>
-                )}
+                  {/* Marcador de Nueva Evidencia */}
+                  {isAdding && (
+                    <mesh position={[newEvidence.pos_x, newEvidence.pos_y, newEvidence.pos_z]}>
+                      <sphereGeometry args={[0.5, 16, 16]} />
+                      <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={1} />
+                      <Html distanceFactor={10}>
+                        <div className="bg-white text-black px-2 py-1 text-[8px] font-mono whitespace-nowrap shadow-[0_0_15px_white] animate-pulse">
+                          POSICIÓN NUEVA
+                        </div>
+                      </Html>
+                    </mesh>
+                  )}
+                </group>
               </Suspense>
 
               <OrbitControls makeDefault maxPolarAngle={Math.PI / 2} />

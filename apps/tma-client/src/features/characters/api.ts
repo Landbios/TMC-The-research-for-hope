@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/client';
 
 export interface CharacterData {
   id: string;
@@ -49,14 +49,13 @@ export interface TMAGameState {
   updated_at: string;
 }
 
-// Verifica si el usuario actual tiene un personaje de TMA vinculado (en la nueva tabla tma_characters)
+// Verifica si el usuario actual tiene un personaje de TMA vinculado
 export async function getTMACharacter(): Promise<TMACharacterData | null> {
-  const supabase = await createClient();
+  const supabase = createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // Hacemos full join con los datos base de TMC Vault en caso de existir vínculo
   const { data, error } = await supabase
     .from('tma_characters')
     .select(`
@@ -69,16 +68,13 @@ export async function getTMACharacter(): Promise<TMACharacterData | null> {
     .limit(1)
     .single();
 
-  if (error || !data) {
-    return null;
-  }
-
+  if (error || !data) return null;
   return data as TMACharacterData;
 }
 
 // Trae todos los personajes que tiene creados el usuario en TMC Vault general
 export async function getVaultCharacters(): Promise<CharacterData[]> {
-  const supabase = await createClient();
+  const supabase = createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
@@ -88,16 +84,13 @@ export async function getVaultCharacters(): Promise<CharacterData[]> {
     .select('id, name, image_url, character_category, age, height, nationality, created_at')
     .eq('user_id', user.id);
 
-  if (error || !data) {
-    return [];
-  }
-
+  if (error || !data) return [];
   return data as CharacterData[];
 }
 
 // Obtiene el estado global de la partida (Singleton)
 export async function getGameState(): Promise<TMAGameState | null> {
-  const supabase = await createClient();
+  const supabase = createClient();
 
   const { data, error } = await supabase
     .from('tma_game_state')
@@ -105,16 +98,13 @@ export async function getGameState(): Promise<TMAGameState | null> {
     .eq('id', 1)
     .single();
 
-  if (error || !data) {
-    return null;
-  }
-
+  if (error || !data) return null;
   return data as TMAGameState;
 }
 
 // Obtiene el perfil del usuario actual (incluyendo el rol)
 export async function getUserProfile(): Promise<TMAProfile | null> {
-  const supabase = await createClient();
+  const supabase = createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -125,9 +115,6 @@ export async function getUserProfile(): Promise<TMAProfile | null> {
     .eq('id', user.id)
     .single();
 
-  if (error || !data) {
-    return null;
-  }
-
+  if (error || !data) return null;
   return data as TMAProfile;
 }

@@ -1,4 +1,4 @@
-import { getTMACharacter, getGameState, getUserProfile } from '@/features/characters/api';
+import { getTMACharacterServer as getTMACharacter, getGameStateServer as getGameState, getUserProfileServer as getUserProfile } from '@/features/characters/server-api';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
