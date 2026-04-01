@@ -6,6 +6,7 @@ import { OrbitControls, Html } from '@react-three/drei';
 import { RoomCube } from '@/features/exploration/components/RoomCube';
 import { getAllRooms, getRoomEvidences, createTmaEvidence } from '../api';
 import { MapPin, Plus, Save, X } from 'lucide-react';
+import ImageUploader from '@/features/shared/components/ImageUploader';
 
 interface Evidence {
   id: string;
@@ -171,16 +172,13 @@ export function AdminRoomEditor() {
                       />
                     </div>
                     
-                    <div className="space-y-1">
-                      <label className="font-mono text-[9px] uppercase opacity-50">URL Imagen</label>
-                      <input 
-                        type="text" 
-                        placeholder="https://..."
-                        className="w-full bg-zinc-900 border border-zinc-800 font-mono text-xs p-2 outline-none text-white focus:border-red-500/50"
-                        value={newEvidence.image_url}
-                        onChange={e => setNewEvidence(prev => ({ ...prev, image_url: e.target.value }))}
-                      />
-                    </div>
+                    <ImageUploader 
+                      label="Evidencia Visual"
+                      value={newEvidence.image_url}
+                      onChange={url => setNewEvidence(prev => ({ ...prev, image_url: url }))}
+                      bucketName="evidence-images"
+                      aspectRatio={1}
+                    />
 
                     <div className="space-y-1">
                       <label className="font-mono text-[9px] uppercase opacity-50">Descripción Breve (Pre-Consenso)</label>
