@@ -7,9 +7,10 @@ import { TMACharacterData, TMAGameState } from '@/features/characters/api';
 interface StateInitializerProps {
   gameState: TMAGameState | null;
   character: TMACharacterData | null;
+  userRole?: 'roleplayer' | 'staff' | 'superadmin';
 }
 
-export function TmaStoreInitializer({ gameState, character }: StateInitializerProps) {
+export function TmaStoreInitializer({ gameState, character, userRole }: StateInitializerProps) {
   const initialized = useRef(false);
 
   useEffect(() => {
@@ -20,9 +21,12 @@ export function TmaStoreInitializer({ gameState, character }: StateInitializerPr
       if (character) {
         useTmaStore.getState().setCharacterData(character);
       }
+      if (userRole) {
+        useTmaStore.getState().setUserRole(userRole);
+      }
       initialized.current = true;
     }
-  }, [gameState, character]);
+  }, [gameState, character, userRole]);
 
   return null;
 }

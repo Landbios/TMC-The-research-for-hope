@@ -2,6 +2,18 @@ import { create } from 'zustand';
 import { TMAGamePeriod, TMAGameState, TMACharacterData } from '@/features/characters/api';
 import type { TMAEvidencePoll } from '@/features/investigation/api';
 
+export interface TMARoomPrivacyPoll {
+  id: string;
+  room_id: string;
+  initiator_id: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  yes_count: number;
+  no_count: number;
+  total_voters: number;
+  expires_at: string;
+  created_at: string;
+}
+
 interface VNState {
   isActive: boolean;
   speaker: string | null;
@@ -18,14 +30,21 @@ interface TmaStoreState {
   investigationPoints: number;
   characterStatus: 'ALIVE' | 'DEAD' | 'MISSING' | 'GUILTY';
   myCharacterId: string | null;
+  userRole: 'roleplayer' | 'staff' | 'superadmin';
   
   // Exploration & VN
   selectedRoomId: string | null;
   vnState: VNState;
+  vnMode: 'WHISPER' | 'GROUP' | 'CLUE';
   vnWhispers: import('@/features/vn-ui/components/VNChatOverlay').VNChatMessage[];
+  activeGroupMessages: import('@/features/vn-ui/components/VNChatOverlay').VNChatMessage[];
+  activeClue: import('@/features/investigation/api').TMAEvidence | null;
+  lastVnActivity: number;
+  isNervalisOpen: boolean;
 
-  // Investigation Polls
+  // Investigation & Privacy Polls
   activePoll: TMAEvidencePoll | null;
+  activePrivacyPoll: TMARoomPrivacyPoll | null;
 
   // Actions
   setGameState: (state: TMAGameState) => void;
@@ -33,9 +52,16 @@ interface TmaStoreState {
   spendInvestigationPoints: (cost: number) => void;
   setSelectedRoomId: (id: string | null) => void;
   setVnState: (state: Partial<VNState>) => void;
+  setVnMode: (mode: 'WHISPER' | 'GROUP' | 'CLUE') => void;
   addVnWhisper: (msg: import('@/features/vn-ui/components/VNChatOverlay').VNChatMessage) => void;
+  addVnGroupMessage: (msg: import('@/features/vn-ui/components/VNChatOverlay').VNChatMessage) => void;
+  setActiveClue: (clue: import('@/features/investigation/api').TMAEvidence | null) => void;
   clearVnWhispers: () => void;
+  clearVnGroupMessages: () => void;
+  toggleNervalis: (open?: boolean) => void;
+  setUserRole: (role: 'roleplayer' | 'staff' | 'superadmin') => void;
   setActivePoll: (poll: TMAEvidencePoll | null) => void;
+  setActivePrivacyPoll: (poll: TMARoomPrivacyPoll | null) => void;
 }
 
 export const useTmaStore = create<TmaStoreState>((set) => ({
@@ -45,11 +71,18 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
   investigationPoints: 7,
   characterStatus: 'ALIVE',
   myCharacterId: null,
+  userRole: 'roleplayer',
   
   selectedRoomId: null,
   vnState: { isActive: false, speaker: null, text: null },
+  vnMode: 'WHISPER',
   vnWhispers: [],
+  activeGroupMessages: [],
+  activeClue: null,
+  lastVnActivity: Date.now(),
+  isNervalisOpen: false,
   activePoll: null,
+  activePrivacyPoll: null,
 
   setGameState: (state) => set({
     gamePeriod: state.current_period,
@@ -68,8 +101,28 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
   })),
 
   setSelectedRoomId: (id) => set({ selectedRoomId: id }),
-  setVnState: (patch) => set((state) => ({ vnState: { ...state.vnState, ...patch } })),
-  addVnWhisper: (msg) => set((state) => ({ vnWhispers: [...state.vnWhispers, msg] })),
+  setVnState: (patch) => set((state) => ({ 
+    vnState: { ...state.vnState, ...patch },
+    lastVnActivity: Date.now()
+  })),
+  setVnMode: (mode) => set({ vnMode: mode, lastVnActivity: Date.now() }),
+  addVnWhisper: (msg) => set((state) => ({ 
+    vnWhispers: [...state.vnWhispers, msg],
+    lastVnActivity: Date.now()
+  })),
+  addVnGroupMessage: (msg) => set((state) => ({ 
+    activeGroupMessages: [...state.activeGroupMessages, msg],
+    lastVnActivity: Date.now()
+  })),
+  setActiveClue: (clue) => set({ 
+    activeClue: clue,
+    vnMode: clue ? 'CLUE' : 'GROUP', // Default to GROUP if clue is cleared
+    lastVnActivity: Date.now()
+  }),
   clearVnWhispers: () => set({ vnWhispers: [] }),
-  setActivePoll: (poll) => set({ activePoll: poll })
+  clearVnGroupMessages: () => set({ activeGroupMessages: [] }),
+  toggleNervalis: (open) => set((state) => ({ isNervalisOpen: open ?? !state.isNervalisOpen })),
+  setUserRole: (role) => set({ userRole: role }),
+  setActivePoll: (poll) => set({ activePoll: poll }),
+  setActivePrivacyPoll: (poll) => set({ activePrivacyPoll: poll })
 }));

@@ -1,8 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
-import { User, X } from 'lucide-react';
+import { User, X, Zap, Trash2 } from 'lucide-react';
+import { useTmaStore } from '@/store/useTmaStore';
+import { startEvidencePoll } from '@/features/investigation/api';
+import { toast } from 'sonner';
 
 export interface VNChatMessage {
   id: string;
@@ -18,23 +21,51 @@ export interface VNChatMessage {
 }
 
 interface VNChatOverlayProps {
-  messages: VNChatMessage[];  // Array of private messages (whispers) targeting or sent by the current user
+  messages: VNChatMessage[];
   onClose: () => void;
+  clueData?: import('@/features/investigation/api').TMAEvidence;
 }
 
-export function VNChatOverlay({ messages, onClose }: VNChatOverlayProps) {
-  if (!messages || messages.length === 0) return null;
+export function VNChatOverlay({ messages, onClose, clueData }: VNChatOverlayProps) {
+  const [isStartingPoll, setIsStartingPoll] = useState(false);
+  const myCharacterId = useTmaStore(state => state.myCharacterId);
+  const investigationPoints = useTmaStore(state => state.investigationPoints);
 
-  const lastMsg = messages[messages.length - 1];
-  const isSystem = lastMsg.is_system_message;
-  const speakerName = lastMsg.sender_name || 'Sistema';
+  const isClueMode = !!clueData;
+  const isMessageMode = messages && messages.length > 0;
+
+  if (!isClueMode && !isMessageMode) return null;
+
+  const lastMsg = isMessageMode ? messages[messages.length - 1] : null;
+  const isSystem = lastMsg?.is_system_message || isClueMode;
+  const speakerName = isClueMode ? clueData.title : (lastMsg?.sender_name || 'Sistema');
 
   // Find the most recent message from a DIFFERENT character to display as the ghost on the left
-  const prevMsg = [...messages].reverse().find(m => 
+  const prevMsg = isMessageMode ? [...messages].reverse().find(m => 
     m.sender_tma_id && 
-    m.sender_tma_id !== lastMsg.sender_tma_id && 
+    lastMsg && m.sender_tma_id !== lastMsg.sender_tma_id && 
     !m.is_system_message
-  );
+  ) : null;
+
+  const handleProposeEvidence = async () => {
+     if (!clueData || !myCharacterId || isStartingPoll) return;
+     if (investigationPoints < 1) {
+        toast.error('ENERGÍA INSUFICIENTE (IP)');
+        return;
+     }
+
+     try {
+        setIsStartingPoll(true);
+        await startEvidencePoll(clueData.id, myCharacterId);
+        toast.success('PROTOCOLO DE CONSENSO INICIADO');
+        onClose();
+     } catch (err) {
+        console.error("Error starting evidence poll:", err);
+        toast.error('ERROR EN EL PROTOCOLO');
+     } finally {
+        setIsStartingPoll(false);
+     }
+  };
 
   return (
     <div className="absolute inset-0 z-40 pointer-events-auto flex flex-col justify-end overflow-hidden animate-fade-in">
@@ -55,49 +86,74 @@ export function VNChatOverlay({ messages, onClose }: VNChatOverlayProps) {
       <div className="absolute top-4 right-4 w-12 h-12 border-t-2 border-r-2 border-(--glow)/40 after:absolute after:top-[-2px] after:right-[-2px] after:w-2 after:h-2 after:bg-(--glow) z-10 pointer-events-none"></div>
 
       <div className="relative w-full flex flex-col justify-end mt-auto pointer-events-none h-full">
-        {/* Sprites Area */}
+        {/* Sprites / Clue Area */}
         <div className="absolute bottom-0 w-full h-[600px] pointer-events-none flex items-end justify-center z-20 px-[10%] mb-32 md:mb-40">
           
-          {/* Previous Speaker Sprite - Dimmed and Left */}
-          {prevMsg && prevMsg.sprite_url && !isSystem && (
-            <div 
-              className="absolute bottom-0 left-[12%] w-[400px] h-[550px] transition-all duration-700 ease-in-out brightness-[0.35] contrast-[1.1] z-10"
-              style={{ 
-                transform: `scale(${prevMsg.scale ?? 0.9}) translateY(${(prevMsg.position_y ?? 0) * -1}px) translateX(-20px)`, 
-                transformOrigin: 'bottom center' 
-              }}
-            >
-              <Image 
-                src={prevMsg.sprite_url} 
-                alt="Previous Speaker" 
-                fill
-                className="object-contain object-bottom" 
-              />
-            </div>
-          )}
-
-          {/* Current Speaker Sprite - Bright and Right/Center */}
-          {!isSystem && lastMsg.sprite_url && (
-            <div 
-              className="absolute bottom-0 right-[12%] w-[450px] h-[600px] pointer-events-auto transition-all duration-500 z-20 animate-in fade-in slide-in-from-bottom-5"
-              style={{ 
-                transform: `scale(${lastMsg.scale ?? 1.0}) translateY(${(lastMsg.position_y ?? 0) * -1}px)`, 
-                transformOrigin: 'bottom center' 
-              }}
-            >
-              <Image 
-                src={lastMsg.sprite_url} 
-                alt={speakerName} 
-                fill
-                className="object-contain object-bottom drop-shadow-[0_0_30px_rgba(0,0,0,0.9)]" 
-              />
-            </div>
-          )}
-
-          {!isSystem && !lastMsg.sprite_url && (
-             <div className="absolute bottom-0 right-[20%] w-[450px] h-[600px] flex justify-center items-end pb-10">
-                <User size={200} className="text-blue-500/20 drop-shadow-[0_0_20px_rgba(59,130,246,0.3)]" />
+          {/* CLUE MODE: Large Central Evidence Image */}
+          {isClueMode && (
+             <div className="absolute bottom-20 w-[500px] h-[500px] transition-all duration-700 animate-in zoom-in-95 fade-in">
+                <div className="relative w-full h-full p-8 bg-zinc-950/40 border border-red-500/30 backdrop-blur-sm">
+                   <Image 
+                     src={clueData.image_url || 'https://picsum.photos/seed/clue/600/600'} 
+                     alt={clueData.title}
+                     fill
+                     className="object-contain p-4 drop-shadow-[0_0_40px_rgba(239,68,68,0.3)]"
+                   />
+                   {/* Scanline overlay for clue */}
+                   <div className="absolute inset-0 bg-linear-to-b from-transparent via-red-500/5 to-transparent h-1 w-full animate-scanline opacity-20 pointer-events-none"></div>
+                </div>
+                {/* Discovery Tag */}
+                <div className="absolute -top-4 -left-4 bg-red-600 text-white font-mono text-[10px] px-3 py-1 uppercase tracking-tighter shadow-lg -rotate-2">
+                   Hallazgo Crítico Detectado
+                </div>
              </div>
+          )}
+
+          {/* CHAT MODE: Multi-sprite layout */}
+          {!isClueMode && isMessageMode && (
+             <>
+                {/* Previous Speaker Sprite - Dimmed and Left */}
+                {prevMsg && prevMsg.sprite_url && (
+                  <div 
+                    className="absolute bottom-0 left-[12%] w-[400px] h-[550px] transition-all duration-700 ease-in-out brightness-[0.35] contrast-[1.1] z-10"
+                    style={{ 
+                      transform: `scale(${prevMsg.scale ?? 0.9}) translateY(${(prevMsg.position_y ?? 0) * -1}px) translateX(-20px)`, 
+                      transformOrigin: 'bottom center' 
+                    }}
+                  >
+                    <Image 
+                      src={prevMsg.sprite_url} 
+                      alt="Previous Speaker" 
+                      fill
+                      className="object-contain object-bottom" 
+                    />
+                  </div>
+                )}
+
+                {/* Current Speaker Sprite - Bright and Right/Center */}
+                {lastMsg && lastMsg.sprite_url && (
+                  <div 
+                    className="absolute bottom-0 right-[12%] w-[450px] h-[600px] pointer-events-auto transition-all duration-500 z-20 animate-in fade-in slide-in-from-bottom-5"
+                    style={{ 
+                      transform: `scale(${lastMsg.scale ?? 1.0}) translateY(${(lastMsg.position_y ?? 0) * -1}px)`, 
+                      transformOrigin: 'bottom center' 
+                    }}
+                  >
+                    <Image 
+                      src={lastMsg.sprite_url} 
+                      alt={speakerName} 
+                      fill
+                      className="object-contain object-bottom drop-shadow-[0_0_30px_rgba(0,0,0,0.9)]" 
+                    />
+                  </div>
+                )}
+
+                {lastMsg && !lastMsg.sprite_url && (
+                   <div className="absolute bottom-0 right-[20%] w-[450px] h-[600px] flex justify-center items-end pb-10">
+                      <User size={200} className="text-blue-500/20 drop-shadow-[0_0_20px_rgba(59,130,246,0.3)]" />
+                   </div>
+                )}
+             </>
           )}
         </div>
 
@@ -129,10 +185,36 @@ export function VNChatOverlay({ messages, onClose }: VNChatOverlayProps) {
            )}
            
            {/* Message Content */}
-           <div className="relative group min-h-20">
-             <p className="text-white text-lg md:text-xl leading-relaxed font-sans font-medium drop-shadow-[1px_1px_2px_rgba(0,0,0,0.5)] max-w-[90%]">
-                {isSystem ? lastMsg.content : `"${lastMsg.content}"`}
-             </p>
+           <div className="relative group min-h-20 flex justify-between items-start">
+             <div className="max-w-[70%]">
+                <p className="text-white text-lg md:text-xl leading-relaxed font-sans font-medium drop-shadow-[1px_1px_2px_rgba(0,0,0,0.5)]">
+                   {isClueMode ? clueData.description_brief : (isSystem ? lastMsg?.content : `"${lastMsg?.content}"`)}
+                </p>
+                {isClueMode && (
+                   <p className="text-red-400 font-mono text-[10px] mt-2 uppercase tracking-widest animate-pulse">
+                      &gt;&gt; PROTOCOLO DE INVESTIGACIÓN REQUERIDO
+                   </p>
+                )}
+             </div>
+
+             {/* Action Buttons for Clue Mode */}
+             {isClueMode && (
+                <div className="flex flex-col gap-3">
+                   <button 
+                     onClick={handleProposeEvidence}
+                     disabled={isStartingPoll}
+                     className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 font-mono text-xs uppercase tracking-widest flex items-center gap-3 transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)] disabled:opacity-50"
+                   >
+                      <Zap size={16} fill="white" /> {isStartingPoll ? 'Iniciando...' : 'Proponer Evidencia'}
+                   </button>
+                   <button 
+                     onClick={onClose}
+                     className="bg-zinc-800 hover:bg-zinc-700 text-white px-6 py-3 font-mono text-xs uppercase tracking-widest flex items-center gap-3 transition-all"
+                   >
+                      <Trash2 size={16} /> Ignorar Hallazgo
+                   </button>
+                </div>
+             )}
            </div>
          </div>
          

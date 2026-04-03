@@ -34,6 +34,7 @@ export interface TMACharacterData {
   investigation_points: number;
   status: 'ALIVE' | 'DEAD' | 'MISSING' | 'GUILTY';
   current_room_id?: string;
+  is_hidden?: boolean;
 
   // Campos anidados si se hace join con character_category general
   tmc_character?: CharacterData;
@@ -117,4 +118,34 @@ export async function getUserProfile(): Promise<TMAProfile | null> {
 
   if (error || !data) return null;
   return data as TMAProfile;
+}
+
+// Obtiene todos los personajes de TMA (Solo para Admin)
+export async function getAllTMACharacters(): Promise<TMACharacterData[]> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('tma_characters')
+    .select(`
+      *,
+      tmc_character:tmc_character_id (
+        id, name, image_url, age, height, nationality
+      )
+    `)
+    .order('tma_name', { ascending: true });
+
+  if (error || !data) return [];
+  return data as TMACharacterData[];
+}
+
+// Actualiza el estado global de la partida (Solo para Admin / Staff)
+export async function updateGameState(updates: Partial<TMAGameState>): Promise<void> {
+  const supabase = createClient();
+
+  const { error } = await supabase
+    .from('tma_game_state')
+    .update(updates)
+    .eq('id', 1);
+
+  if (error) throw error;
 }

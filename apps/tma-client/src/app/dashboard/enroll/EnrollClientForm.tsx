@@ -29,6 +29,7 @@ export default function EnrollClientForm({ vaultCharacters }: Props) {
   // New Subject Tab State
   const [newName, setNewName] = useState('');
   const [newImage, setNewImage] = useState('');
+  const [spriteIdle, setSpriteIdle] = useState('');
 
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -54,6 +55,7 @@ export default function EnrollClientForm({ vaultCharacters }: Props) {
           tmc_character_id: selectedCharacter,
           tma_title: tmaTitle,
           tma_biography: tmaBiography,
+          sprite_idle_url: spriteIdle || undefined,
         });
 
       if (error) throw error;
@@ -84,6 +86,7 @@ export default function EnrollClientForm({ vaultCharacters }: Props) {
           user_id: user.id,
           tma_name: newName,
           image_url: newImage,
+          sprite_idle_url: spriteIdle || newImage, // Use avatar as default sprite if not provided
           tma_title: tmaTitle,
           tma_biography: tmaBiography,
         });
@@ -211,6 +214,16 @@ export default function EnrollClientForm({ vaultCharacters }: Props) {
               />
             </div>
 
+            <div className="space-y-2 animate-fade-in transition-all" style={{ opacity: selectedCharacter ? 1 : 0.3, pointerEvents: selectedCharacter ? 'auto' : 'none' }}>
+               <ImageUploader
+                  label="OPTIONAL: 3D WORLD SPRITE OVERRIDE"
+                  value={spriteIdle}
+                  onChange={setSpriteIdle}
+                  aspectRatio={1} 
+               />
+               <p className="font-mono text-[8px] mt-1 opacity-50">LEAVE EMPTY TO USE VAULT IMAGE AS SPRITE.</p>
+            </div>
+
             <button 
               type="submit" 
               disabled={!selectedCharacter || loading}
@@ -270,6 +283,16 @@ export default function EnrollClientForm({ vaultCharacters }: Props) {
                   className="w-full bg-black text-(--glow) sci-border p-3 min-h-[120px] font-mono text-sm focus:outline-none focus:bg-(--glow)/10 uppercase transition-colors"
                   required={activeTab === 'new'}
                 />
+              </div>
+
+              <div className="pt-2 border-t border-(--glow)/20">
+                 <ImageUploader
+                    label="3D WORLD SPRITE (FULL BODY)"
+                    value={spriteIdle}
+                    onChange={setSpriteIdle}
+                    aspectRatio={0.7} // Typical sprite aspect ratio
+                 />
+                 <p className="font-mono text-[8px] mt-1 opacity-50 uppercase">IF EMPTY, AVATAR IMAGE WILL BE USED AS SPRITE.</p>
               </div>
             </div>
           </div>

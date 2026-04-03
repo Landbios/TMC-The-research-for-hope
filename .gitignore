@@ -19,6 +19,8 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+*.txt
+*.sql
 
 # npm/pnpm/yarn debug logs
 npm-debug.log*
