@@ -365,17 +365,34 @@ export function InsideRoomArena() {
       </Suspense>
       
       {vnWhispers.length > 0 && vnMode === 'WHISPER' && (
-         <VNChatOverlay messages={vnWhispers} onClose={clearVnWhispers} />
+         <VNChatOverlay 
+           messages={vnWhispers} 
+           onClose={() => {
+              clearVnWhispers();
+              setVnState({ isActive: false });
+           }} 
+         />
       )}
 
       {activeGroupMessages.length >= 0 && vnMode === 'GROUP' && (
-         <VNChatOverlay messages={activeGroupMessages} onClose={clearVnGroupMessages} />
+         <VNChatOverlay 
+           messages={activeGroupMessages} 
+           onClose={() => {
+              clearVnGroupMessages();
+              setVnMode('WHISPER');
+              setVnState({ isActive: false });
+           }} 
+         />
       )}
 
       {activeClue && vnMode === 'CLUE' && (
          <VNChatOverlay 
            messages={[]} 
-           onClose={() => setActiveClue(null)} 
+           onClose={() => {
+              setActiveClue(null);
+              setVnMode('WHISPER');
+              setVnState({ isActive: false });
+           }} 
            clueData={activeClue} 
          />
       )}

@@ -9,6 +9,7 @@ export function VNDialogBox() {
   const setVnState = useTmaStore((state) => state.setVnState);
   const selectedRoomId = useTmaStore((state) => state.selectedRoomId);
   const setSelectedRoomId = useTmaStore((state) => state.setSelectedRoomId);
+  const vnMode = useTmaStore((state) => state.vnMode);
   const [displayedText, setDisplayedText] = useState('');
   const [activeUsersCount, setActiveUsersCount] = useState<number | null>(null);
   const [stealthHidden, setStealthHidden] = useState<boolean>(false);
@@ -93,7 +94,8 @@ export function VNDialogBox() {
     await executeEntry(false);
   };
 
-  if (!vnState.isActive) return null;
+  // Si estamos en medio de una escena cinemática (GRUPO o CLUE), ocultamos el cuadro de diálogo simple
+  if (!vnState.isActive || vnMode !== 'WHISPER') return null;
 
   return (
     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-4xl z-50 pointer-events-auto animate-fade-in-up">

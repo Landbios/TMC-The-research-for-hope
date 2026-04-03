@@ -116,7 +116,7 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
   })),
   setActiveClue: (clue) => set({ 
     activeClue: clue,
-    vnMode: clue ? 'CLUE' : 'GROUP', // Default to GROUP if clue is cleared
+    vnMode: clue ? 'CLUE' : 'WHISPER', // Default to WHISPER if clue is cleared
     lastVnActivity: Date.now()
   }),
   clearVnWhispers: () => set({ vnWhispers: [] }),
