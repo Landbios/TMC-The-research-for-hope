@@ -39,6 +39,7 @@ export function InsideRoomArena() {
   const [isPrivate, setIsPrivate] = useState(false);
 
   const gamePeriod = useTmaStore((state) => state.gamePeriod);
+  const vnState = useTmaStore((state) => state.vnState);
   const setVnState = useTmaStore((state) => state.setVnState);
   
   const addVnWhisper = useTmaStore((state) => state.addVnWhisper);
@@ -380,10 +381,10 @@ export function InsideRoomArena() {
       )}
 
       {/* Poll de Privacidad */}
-      {activePrivacyPoll && <PrivacyPollModal />}
+      {activePrivacyPoll && !vnState.isActive && <PrivacyPollModal />}
 
       {/* Dialogo de Sigilo */}
-      {showStealthEntry && (
+      {showStealthEntry && !vnState.isActive && (
          <StealthEntryDialog 
            roomName={roomId.replace(/_/g, ' ')} 
            onDecide={handleStealthResolve}
@@ -392,7 +393,7 @@ export function InsideRoomArena() {
       )}
       
       {/* Indicador de Privacidad (HUD) */}
-      {isPrivate && (
+      {isPrivate && !vnState.isActive && (
          <div className="absolute top-6 left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center z-50">
             <div className="px-6 py-1 bg-blue-600/20 border border-blue-500/50 backdrop-blur-md rounded-full flex items-center gap-2 animate-pulse">
                <Shield size={14} className="text-blue-400" />
@@ -404,25 +405,27 @@ export function InsideRoomArena() {
       )}
 
       {/* Botones de Control de Sala */}
-      <div className="absolute top-24 right-6 flex flex-col gap-2 z-50">
-         {characters.length > 0 && !activePrivacyPoll && !isPrivate && (
-            <button 
-              onClick={handleProposePrivacy}
-              className="pointer-events-auto p-3 border border-blue-500/50 bg-black/80 text-blue-500 hover:bg-blue-500 hover:text-black transition-all flex items-center gap-2 font-mono text-[10px] uppercase shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-            >
-              <Zap size={14} /> Proponer Privacidad
-            </button>
-         )}
+      {(!vnState.isActive) && (
+        <div className="absolute top-24 right-6 flex flex-col gap-2 z-50">
+           {characters.length > 0 && !activePrivacyPoll && !isPrivate && (
+              <button 
+                onClick={handleProposePrivacy}
+                className="pointer-events-auto p-3 border border-blue-500/50 bg-black/80 text-blue-500 hover:bg-blue-500 hover:text-black transition-all flex items-center gap-2 font-mono text-[10px] uppercase shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+              >
+                <Zap size={14} /> Proponer Privacidad
+              </button>
+           )}
 
-         {isPrivate && (
-            <button 
-               onClick={() => handleTogglePrivacy(false)}
-               className="pointer-events-auto p-3 border border-red-500/50 bg-black/80 text-red-500 hover:bg-red-500 hover:text-black transition-all flex items-center gap-2 font-mono text-[10px] uppercase shadow-[0_0_15px_rgba(239,68,68,0.2)]"
-            >
-               <ShieldOff size={14} /> Desactivar Privacidad
-            </button>
-         )}
-      </div>
+           {isPrivate && (
+              <button 
+                 onClick={() => handleTogglePrivacy(false)}
+                 className="pointer-events-auto p-3 border border-red-500/50 bg-black/80 text-red-500 hover:bg-red-500 hover:text-black transition-all flex items-center gap-2 font-mono text-[10px] uppercase shadow-[0_0_15px_rgba(239,68,68,0.2)]"
+              >
+                 <ShieldOff size={14} /> Desactivar Privacidad
+              </button>
+           )}
+        </div>
+      )}
     </>
   );
 }

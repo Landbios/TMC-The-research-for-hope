@@ -28,7 +28,7 @@ export async function createTmaEvidence(evidence: {
   room_id: string;
   title: string;
   description_brief?: string;
-  description_full?: string;
+  description_detailed?: string;
   image_url?: string;
   is_fake?: boolean;
   investigation_cost?: number;
