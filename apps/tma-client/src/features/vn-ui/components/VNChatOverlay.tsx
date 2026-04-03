@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { User, X, Zap, Trash2 } from 'lucide-react';
+import { User, X, Zap, Trash2, Monitor, Loader2 } from 'lucide-react';
 import { useTmaStore } from '@/store/useTmaStore';
 import { startEvidencePoll } from '@/features/investigation/api';
 import { toast } from 'sonner';
@@ -30,14 +30,17 @@ export function VNChatOverlay({ messages, onClose, clueData }: VNChatOverlayProp
   const [isStartingPoll, setIsStartingPoll] = useState(false);
   const myCharacterId = useTmaStore(state => state.myCharacterId);
   const investigationPoints = useTmaStore(state => state.investigationPoints);
+  const vnMode = useTmaStore(state => state.vnMode);
 
   const isClueMode = !!clueData;
   const isMessageMode = messages && messages.length > 0;
+  const isGroupActive = vnMode === 'GROUP';
 
-  if (!isClueMode && !isMessageMode) return null;
+  // Solo retornamos null si no hay pista, no hay mensajes, y NO estamos explícitamente en modo grupo
+  if (!isClueMode && !isMessageMode && !isGroupActive) return null;
 
   const lastMsg = isMessageMode ? messages[messages.length - 1] : null;
-  const isSystem = lastMsg?.is_system_message || isClueMode;
+  const isSystem = lastMsg?.is_system_message || isClueMode || (!isMessageMode && isGroupActive);
   const speakerName = isClueMode ? clueData.title : (lastMsg?.sender_name || 'Sistema');
 
   // Find the most recent message from a DIFFERENT character to display as the ghost on the left
@@ -155,6 +158,21 @@ export function VNChatOverlay({ messages, onClose, clueData }: VNChatOverlayProp
                 )}
              </>
           )}
+
+          {/* GRUPO VACÍO: Mostramos un estado de espera cinemática */}
+          {isGroupActive && !isMessageMode && !isClueMode && (
+             <div className="absolute inset-0 flex items-center justify-center pointer-events-none mb-32 md:mb-40">
+                <div className="flex flex-col items-center gap-6 animate-pulse">
+                   <Monitor size={80} className="text-(--glow)/30" />
+                   <div className="flex items-center gap-3">
+                      <Loader2 size={16} className="text-(--glow) animate-spin" />
+                      <span className="font-mono text-xs uppercase tracking-[0.5em] text-(--glow)/50">
+                         Sintonizando Canal Grupal
+                      </span>
+                   </div>
+                </div>
+             </div>
+          )}
         </div>
 
         {/* Text Box - Full Width, elevated slightly above RoomNavigation */}
@@ -188,7 +206,13 @@ export function VNChatOverlay({ messages, onClose, clueData }: VNChatOverlayProp
            <div className="relative group min-h-20 flex justify-between items-start">
              <div className="max-w-[70%]">
                 <p className="text-white text-lg md:text-xl leading-relaxed font-sans font-medium drop-shadow-[1px_1px_2px_rgba(0,0,0,0.5)]">
-                   {isClueMode ? clueData.description_brief : (isSystem ? lastMsg?.content : `"${lastMsg?.content}"`)}
+                   {isClueMode 
+                     ? clueData.description_brief 
+                     : (isMessageMode 
+                         ? (isSystem ? lastMsg?.content : `"${lastMsg?.content}"`)
+                         : "Protocolo de Charla Grupal Iniciado. Esperando transmisiones de otros estudiantes en esta zona..."
+                       )
+                   }
                 </p>
                 {isClueMode && (
                    <p className="text-red-400 font-mono text-[10px] mt-2 uppercase tracking-widest animate-pulse">

@@ -367,7 +367,7 @@ export function InsideRoomArena() {
          <VNChatOverlay messages={vnWhispers} onClose={clearVnWhispers} />
       )}
 
-      {activeGroupMessages.length > 0 && vnMode === 'GROUP' && (
+      {activeGroupMessages.length >= 0 && vnMode === 'GROUP' && (
          <VNChatOverlay messages={activeGroupMessages} onClose={clearVnGroupMessages} />
       )}
 

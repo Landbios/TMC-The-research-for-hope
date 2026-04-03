@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { TMACharacterData } from '@/features/characters/api';
+import { Monitor, MonitorOff } from 'lucide-react';
 
 interface RoomNavigationProps {
   characters?: TMACharacterData[];
@@ -14,6 +15,8 @@ interface RoomNavigationProps {
 export function RoomNavigation({ characters = [] }: RoomNavigationProps) {
   const vnState = useTmaStore(state => state.vnState);
   const myCharacterId = useTmaStore(state => state.myCharacterId);
+  const vnMode = useTmaStore(state => state.vnMode);
+  const setVnMode = useTmaStore(state => state.setVnMode);
   
   const [text, setText] = useState('');
   const [targetId, setTargetId] = useState<string>('');
@@ -53,6 +56,19 @@ export function RoomNavigation({ characters = [] }: RoomNavigationProps) {
       {!vnState.isActive && (
          <div className="absolute bottom-6 md:bottom-8 right-6 pointer-events-auto flex items-stretch gap-2 animate-fade-in-up">
            
+           {/* Toggle Modo VN (Charla Grupal) */}
+           <button 
+             onClick={() => setVnMode(vnMode === 'GROUP' ? 'WHISPER' : 'GROUP')}
+             className={`px-3 flex items-center justify-center border transition-all duration-300 pointer-events-auto ${
+               vnMode === 'GROUP' 
+                 ? 'bg-blue-600 border-blue-400 text-white shadow-[0_0_20px_rgba(37,99,235,0.5)]' 
+                 : 'bg-black/70 border-(--glow) text-(--glow)/50 hover:text-(--glow)'
+             }`}
+             title={vnMode === 'GROUP' ? "Desactivar Modo VN" : "Activar Modo VN (Charla Grupal)"}
+           >
+             {vnMode === 'GROUP' ? <Monitor size={18} /> : <MonitorOff size={18} />}
+           </button>
+
            {/* Selector de Objetivo (Susurros) */}
            <div className="flex gap-1">
              <select
