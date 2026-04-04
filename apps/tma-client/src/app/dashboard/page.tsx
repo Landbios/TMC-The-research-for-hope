@@ -1,9 +1,7 @@
 import { getTMACharacterServer as getTMACharacter, getGameStateServer as getGameState, getUserProfileServer as getUserProfile } from '@/features/characters/server-api';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { TmaStoreInitializer } from '@/components/TmaStoreInitializer';
-import { PollRealtimeListener } from '@/features/investigation/components/PollRealtimeListener';
-import { GlobalPollOverlay } from '@/features/dashboard/components/GlobalPollOverlay';
+import { GlobalTmaRegistry } from '@/components/GlobalTmaRegistry';
 import { UserDashboardView } from '@/features/dashboard/components/UserDashboardView';
 import { AdminDashboardView } from '@/features/dashboard/components/AdminDashboardView';
 import { NervalisOverlay } from '@/features/dashboard/components/NervalisOverlay';
@@ -23,9 +21,11 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col items-center justify-center w-full max-w-6xl mx-auto h-full animate-fade-in relative pt-0 md:pt-4">
-      <TmaStoreInitializer character={character} gameState={gameState} userRole={profile?.role as 'roleplayer' | 'staff' | 'superadmin'} />
-      <PollRealtimeListener />
-      <GlobalPollOverlay />
+      <GlobalTmaRegistry 
+        character={character} 
+        gameState={gameState} 
+        userRole={profile?.role as 'roleplayer' | 'staff' | 'superadmin'} 
+      />
       <NervalisOverlay />
 
       {/* Pantalla CRT global */}

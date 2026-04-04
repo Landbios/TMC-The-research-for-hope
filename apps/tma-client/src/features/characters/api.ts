@@ -35,6 +35,7 @@ export interface TMACharacterData {
   status: 'ALIVE' | 'DEAD' | 'MISSING' | 'GUILTY';
   current_room_id?: string;
   is_hidden?: boolean;
+  is_volunteer: boolean | null;
 
   // Campos anidados si se hace join con character_category general
   tmc_character?: CharacterData;
@@ -47,6 +48,7 @@ export interface TMAGameState {
   current_period: TMAGamePeriod;
   current_motive: string | null;
   body_discovery_active: boolean;
+  assassin_poll_active: boolean;
   updated_at: string;
 }
 
@@ -146,6 +148,18 @@ export async function updateGameState(updates: Partial<TMAGameState>): Promise<v
     .from('tma_game_state')
     .update(updates)
     .eq('id', 1);
+
+  if (error) throw error;
+}
+
+// Actualiza el estado de voluntario para un personaje (Roleplayer)
+export async function updateVolunteerStatus(characterId: string, is_volunteer: boolean): Promise<void> {
+  const supabase = createClient();
+
+  const { error } = await supabase
+    .from('tma_characters')
+    .update({ is_volunteer })
+    .eq('id', characterId);
 
   if (error) throw error;
 }

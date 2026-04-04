@@ -2,7 +2,7 @@
 
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useTmaStore } from '@/store/useTmaStore';
 import { createClient } from '@/lib/supabase/client';
@@ -42,8 +42,6 @@ export function InsideRoomArena() {
   const vnState = useTmaStore((state) => state.vnState);
   const setVnState = useTmaStore((state) => state.setVnState);
   
-  const addVnWhisper = useTmaStore((state) => state.addVnWhisper);
-  const addVnGroupMessage = useTmaStore((state) => state.addVnGroupMessage);
   const vnWhispers = useTmaStore((state) => state.vnWhispers);
   const activeGroupMessages = useTmaStore((state) => state.activeGroupMessages);
   const clearVnWhispers = useTmaStore((state) => state.clearVnWhispers);
@@ -61,41 +59,54 @@ export function InsideRoomArena() {
   
   const isNight = gamePeriod === 'NIGHTTIME';
 
+  const charactersRef = useRef<TMACharacterData[]>([]);
+  useEffect(() => {
+     charactersRef.current = characters;
+  }, [characters]);
+
+  // 2. Efecto de Verificación Inicial (Privacidad / Sigilo)
+  useEffect(() => {
+    if (!roomId || roomId === 'UNKNOWN_SECTOR' || !myCharacterId) return;
+    
+    const checkRoomEntry = async () => {
+       const supabase = createClient();
+       const { data: roomData } = await supabase.from('tma_rooms').select('is_private').eq('id', roomId).single();
+       if (roomData) setIsPrivate(roomData.is_private);
+
+       if (roomData?.is_private && !isStealthing) {
+          setShowStealthEntry(true);
+       } else {
+          // Si no hay necesidad de sigilo, actualizamos nuestra ubicación directamente
+          await supabase.from('tma_characters').update({ current_room_id: roomId, is_hidden: false }).eq('id', myCharacterId);
+       }
+    };
+    
+    checkRoomEntry();
+  }, [roomId, myCharacterId, isStealthing]);
+
+  // 3. Efecto de Suscripciones en Tiempo Real (Estable)
   useEffect(() => {
     if (!roomId || roomId === 'UNKNOWN_SECTOR') return;
     let mounted = true;
     const supabase = createClient();
+    let currentCharacterId: string | null = null;
+    let myCharData: TMACharacterData | null = null;
     
-    // Carga inicial
     const fetchChars = async () => {
-      // Obtenemos al personaje local para ocultar su propio cuerpo
       const { data: { user } } = await supabase.auth.getUser();
-      const { data: myCharData } = await supabase.from('tma_characters').select('*').eq('user_id', user?.id).limit(1).single();
-      const currentCharacterId = myCharData?.id;
+      const { data: charData } = await supabase.from('tma_characters').select('*').eq('user_id', user?.id).limit(1).single();
       
-      if (myCharData) {
-         useTmaStore.getState().setCharacterData(myCharData as TMACharacterData);
-         
-         // 1. Verificar estado de privacidad
-         const { data: roomData } = await supabase.from('tma_rooms').select('is_private').eq('id', roomId).single();
-         if (roomData && mounted) setIsPrivate(roomData.is_private);
-
-         // 2. Decidir si mostrar dialogo de sigilo
-         if ((roomData?.is_private) && !isStealthing) {
-            setShowStealthEntry(true);
-         } else {
-            // Si no hay necesidad de sigilo, actualizamos nuestra ubicación directamente
-            await supabase.from('tma_characters').update({ current_room_id: roomId, is_hidden: false }).eq('id', currentCharacterId);
-         }
+      if (charData) {
+         myCharData = charData as TMACharacterData;
+         currentCharacterId = charData.id;
+         useTmaStore.getState().setCharacterData(charData as TMACharacterData);
       }
 
       const { data } = await supabase.from('tma_characters').select('*').eq('current_room_id', roomId);
       if (data && mounted) {
-        // Solo ver personajes que NO estén ocultos (excepto yo que ya estoy filtrado)
         setCharacters(data.filter(c => c.id !== currentCharacterId && !c.is_hidden) as TMACharacterData[]);
       }
 
-      // Carga de pistas
       if (mounted) {
         const roomClues = await getRoomClues(roomId);
         setClues(roomClues);
@@ -168,14 +179,14 @@ export function InsideRoomArena() {
                  senderName = myCharData.tma_name || 'Yo';
                  spriteUrl = myCharData.sprite_idle_url || myCharData.image_url;
               } else {
-                 const found = characters.find(c => c.id === msg.sender_tma_id);
+                 const found = charactersRef.current.find(c => c.id === msg.sender_tma_id);
                  if (found) {
                     senderName = found.tma_name || 'Desconocido';
                     spriteUrl = found.sprite_idle_url || found.image_url;
                  }
               }
               
-              addVnWhisper({
+              useTmaStore.getState().addVnWhisper({
                  id: msg.id,
                  sender_tma_id: msg.sender_tma_id,
                  sender_name: senderName,
@@ -216,14 +227,14 @@ export function InsideRoomArena() {
                  senderName = myCharData.tma_name || 'Yo';
                  spriteUrl = myCharData.sprite_idle_url || myCharData.image_url;
               } else {
-                 const foundChar = characters.find(c => c.id === msg.sender_tma_id);
+                 const foundChar = charactersRef.current.find(c => c.id === msg.sender_tma_id);
                  if (foundChar) {
                     senderName = foundChar.tma_name || 'Desconocido';
                     spriteUrl = foundChar.sprite_idle_url || foundChar.image_url;
                  }
               }
 
-              addVnGroupMessage({
+              useTmaStore.getState().addVnGroupMessage({
                  id: msg.id,
                  sender_tma_id: msg.sender_tma_id,
                  sender_name: senderName,
@@ -239,7 +250,7 @@ export function InsideRoomArena() {
     
     fetchChars();
 
-    // Timer de auto-cierre para Group Talk después de 30s de inactividad
+    // Timer de auto-cierre...
     const autoCloseInterval = setInterval(() => {
        const state = useTmaStore.getState();
        const now = Date.now();
@@ -253,11 +264,12 @@ export function InsideRoomArena() {
       mounted = false;
       clearInterval(autoCloseInterval);
       if (myCharacterId) {
+         // Solo reseteamos la sala si estamos UNMOUNTING de la vista de sala por completo
          supabase.from('tma_characters').update({ current_room_id: null, is_hidden: false }).eq('id', myCharacterId).then();
       }
       supabase.removeAllChannels();
     };
-  }, [roomId, addVnWhisper, addVnGroupMessage, isStealthing, setActivePrivacyPoll, myCharacterId, characters]);
+  }, [roomId, myCharacterId, setActivePrivacyPoll]);
 
   const handleCharacterClick = (id: string, name: string) => {
     setVnState({

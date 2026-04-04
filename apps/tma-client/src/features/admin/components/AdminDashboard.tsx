@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Shield, Users, Map as MapIcon, Database } from 'lucide-react';
+import { toast } from 'sonner';
 import { AdminRoomEditor } from './AdminRoomEditor';
-import { getAllVolunteers } from '../api';
+import { getAllVolunteers, resetAllInvestigationPoints, updateAssassinPollStatus, selectRandomAssassin } from '../api';
+import { getGameState } from '@/features/characters/api';
 import type { TMACharacterData } from '@/features/characters/api';
 
 
@@ -15,12 +17,79 @@ interface AdminDashboardProps {
 export function AdminDashboard({ userRole }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<'rooms' | 'polls' | 'users'>('rooms');
   const [volunteers, setVolunteers] = useState<TMACharacterData[]>([]);
+  const [isPollActive, setIsPollActive] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    getGameState().then(state => {
+      if (state) setIsPollActive(state.assassin_poll_active);
+    });
+  }, []);
 
   useEffect(() => {
     if (activeTab === 'polls') {
+      const interval = setInterval(() => {
+        getAllVolunteers().then(setVolunteers);
+      }, 5000);
       getAllVolunteers().then(setVolunteers);
+      return () => clearInterval(interval);
     }
   }, [activeTab]);
+
+  const handleResetPoints = async () => {
+    if (!confirm('¿Seguro que quieres resetear los puntos de investigación de todos?')) return;
+    setIsLoading(true);
+    try {
+      await resetAllInvestigationPoints();
+      toast.success('Puntos reseteados a 7 para todos los estudiantes.');
+    } catch (e) {
+      toast.error('Error al resetear puntos: ' + e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTogglePoll = async () => {
+    setIsLoading(true);
+    try {
+      const newState = !isPollActive;
+      await updateAssassinPollStatus(newState);
+      setIsPollActive(newState);
+      if (newState) {
+        toast.success('PROTOCOLO BLACKOUT ACTIVADO: Poll de intención de asesinato en curso.', {
+          duration: 5000,
+          description: 'Todos los estudiantes han sido notificados.',
+        });
+      } else {
+        toast.info('Poll de asesinato desactivado.');
+      }
+    } catch (e) {
+      toast.error('Error al cambiar estado del poll: ' + e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSelectAssassin = async () => {
+    if (volunteers.length === 0) {
+       toast.error('No hay voluntarios registrados para el proceso de selección.');
+       return;
+    }
+    setIsLoading(true);
+    try {
+      const selected = await selectRandomAssassin();
+      toast.success(`PROTOCOLO COMPLETADO: El asesino seleccionado es ${selected.tma_name}`, {
+        duration: 10000,
+        description: 'Se ha enviado una notificación privada al agresor.',
+      });
+      setIsPollActive(false);
+      setVolunteers([]);
+    } catch (e) {
+      toast.error('Error en la selección: ' + e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col w-full max-w-7xl mx-auto h-full animate-fade-in relative pt-4 text-(--glow)">
@@ -78,6 +147,7 @@ export function AdminDashboard({ userRole }: AdminDashboardProps) {
            {activeTab === 'rooms' && (
               <AdminRoomEditor />
            )}
+           
            {activeTab === 'polls' && (
               <div className="flex flex-col space-y-6">
                  <h2 className="text-xl font-bold border-b border-red-500/30 pb-2 font-mono">SELECCIÓN DE ASESINO (BLACKOUT PROTOCOL)</h2>
@@ -89,7 +159,7 @@ export function AdminDashboard({ userRole }: AdminDashboardProps) {
                              volunteers.map((v: TMACharacterData) => (
                                 <div key={v.id} className="flex justify-between items-center bg-black/40 p-2 border border-red-500/20">
                                    <span className="font-mono text-xs text-red-400">{v.tma_name}</span>
-                                   <button className="text-[10px] bg-red-500/20 px-2 py-1 border border-red-500/50 hover:bg-red-500 text-white transition-all">SELECCIONAR</button>
+                                   <span className="text-[8px] color-green-500/50 uppercase font-mono">Registrado</span>
                                 </div>
                              ))
                           ) : (
@@ -99,9 +169,51 @@ export function AdminDashboard({ userRole }: AdminDashboardProps) {
                     </div>
                     <div className="sci-border border-red-500/30 p-4">
                        <h3 className="font-mono text-xs mb-4 text-red-400 font-bold tracking-widest uppercase">HERRAMIENTAS DE MÁSTER</h3>
-                       <button className="w-full py-2 bg-red-600 text-white font-mono text-xs uppercase hover:bg-red-700 transition-colors shadow-[0_0_15px_rgba(220,38,38,0.4)]">
-                          LANZAR POLL DE &quot;INTENCIÓN DE MATAR&quot;
+                       <div className="space-y-4">
+                          <button 
+                            disabled={isLoading}
+                            onClick={handleTogglePoll}
+                            className={`w-full py-2 font-mono text-xs uppercase transition-colors shadow-[0_0_15px_rgba(220,38,38,0.4)] ${isPollActive ? 'bg-zinc-800 text-red-500 border border-red-500' : 'bg-red-600 text-white hover:bg-red-700'}`}
+                          >
+                             {isPollActive ? 'DETENER POLL DE INTENCIÓN' : 'LANZAR POLL DE "INTENCIÓN DE MATAR"'}
+                          </button>
+
+                          {volunteers.length > 0 && (
+                            <button 
+                              disabled={isLoading}
+                              onClick={handleSelectAssassin}
+                              className="w-full py-2 bg-white text-black font-mono text-xs uppercase font-bold hover:bg-zinc-200 transition-colors animate-pulse"
+                            >
+                               SELECCIONAR ASESINO ALEATORIO ({volunteers.length})
+                            </button>
+                          )}
+
+                          <p className="font-mono text-[9px] opacity-40 leading-tight">
+                             * El asesino será elegido al azar entre quienes acepten el poll. 
+                             El sistema les notificará por chat off-rol.
+                          </p>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+           )}
+
+           {activeTab === 'users' && (
+              <div className="flex flex-col space-y-6">
+                 <h2 className="text-xl font-bold border-b border-red-500/30 pb-2 font-mono">ESTADO GLOBAL DE LA ACADEMIA</h2>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="sci-border border-red-500/30 p-4 bg-red-500/5">
+                       <h3 className="font-mono text-xs mb-4 opacity-70 underline uppercase">GESTIÓN DE RECURSOS</h3>
+                       <button 
+                         disabled={isLoading}
+                         onClick={handleResetPoints}
+                         className="w-full py-3 bg-red-500/10 text-red-500 border border-red-500/50 font-mono text-xs uppercase hover:bg-red-500 hover:text-white transition-all shadow-[0_0_10px_rgba(239,68,68,0.2)]"
+                       >
+                          RESET PUNTAJE DE INVESTIGACIÓN (7 IP)
                        </button>
+                       <p className="mt-2 font-mono text-[9px] opacity-40">
+                          Restaura los puntos de todos los estudiantes ALIVE a su valor predeterminado.
+                       </p>
                     </div>
                  </div>
               </div>

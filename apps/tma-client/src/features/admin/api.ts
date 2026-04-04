@@ -7,7 +7,8 @@ export async function getAllVolunteers() {
   const { data, error } = await supabase
     .from('tma_characters')
     .select('*')
-    .eq('status', 'ALIVE');
+    .eq('status', 'ALIVE')
+    .eq('is_volunteer', true);
 
   if (error) return [];
   return data;
@@ -64,5 +65,76 @@ export async function getAllRooms() {
 
   if (error) return [];
   return data;
+}
+
+// Resetea los puntos de investigación para todos los personajes vivos
+export async function resetAllInvestigationPoints() {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('tma_characters')
+    .update({ investigation_points: 7 })
+    .eq('status', 'ALIVE');
+
+  if (error) throw error;
+}
+
+// Activa o desactiva el poll de asesinato en el estado del juego
+export async function updateAssassinPollStatus(active: boolean) {
+  const supabase = createClient();
+  
+  // Si estamos activando el poll, reseteamos las elecciones de todos para que les aparezca el overlay
+  if (active) {
+    await supabase
+      .from('tma_characters')
+      .update({ is_volunteer: null })
+      .eq('status', 'ALIVE');
+  }
+
+  const { error } = await supabase
+    .from('tma_game_state')
+    .update({ assassin_poll_active: active})
+    .eq('id', 1)
+    .select(); 
+
+  if (error) {
+    console.error("Error completo:", error);
+    throw error;
+  }
+}
+// Escoge un asesino al azar de la lista de voluntarios
+export async function selectRandomAssassin() {
+  const supabase = createClient();
+  
+  // 1. Obtener todos los voluntarios vivos
+  const { data: volunteers, error: fetchError } = await supabase
+    .from('tma_characters')
+    .select('id, tma_name')
+    .eq('status', 'ALIVE')
+    .eq('is_volunteer', true);
+
+  if (fetchError) throw fetchError;
+  if (!volunteers || volunteers.length === 0) {
+    throw new Error('No hay voluntarios disponibles.');
+  }
+
+  // 2. Seleccionar uno al azar
+  const randomIndex = Math.floor(Math.random() * volunteers.length);
+  const selectedAssassin = volunteers[randomIndex];
+
+  // 3. Desactivar el poll y limpiar voluntarios
+  const { error: updateError } = await supabase
+    .from('tma_game_state')
+    .update({ assassin_poll_active: false })
+    .eq('id', 1);
+
+  if (updateError) throw updateError;
+
+  // Limpiar voluntarios para la próxima (Resetear a NULL)
+  await supabase
+    .from('tma_characters')
+    .update({ is_volunteer: null })
+    .not('is_volunteer', 'is', null);
+
+  return selectedAssassin;
 }
 

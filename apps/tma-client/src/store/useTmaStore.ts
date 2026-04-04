@@ -25,6 +25,7 @@ interface TmaStoreState {
   gamePeriod: TMAGamePeriod;
   motive: string | null;
   isBodyDiscoveryActive: boolean;
+  isAssassinPollActive: boolean;
   
   // Local Player Context
   investigationPoints: number;
@@ -68,6 +69,7 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
   gamePeriod: 'FREE_TIME',
   motive: null,
   isBodyDiscoveryActive: false,
+  isAssassinPollActive: false,
   investigationPoints: 7,
   characterStatus: 'ALIVE',
   myCharacterId: null,
@@ -88,6 +90,7 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
     gamePeriod: state.current_period,
     motive: state.current_motive,
     isBodyDiscoveryActive: state.body_discovery_active,
+    isAssassinPollActive: state.assassin_poll_active,
   }),
   
   setCharacterData: (char) => set({

@@ -78,7 +78,16 @@ export async function resolvePoll(pollId: string, status: 'ACCEPTED' | 'REJECTED
   if (pollError) throw pollError;
 
   if (status === 'ACCEPTED') {
-    // 2. Descontar IP al iniciador
+    // 2. Obtener el coste de la evidencia
+    const { data: evidence } = await supabase
+      .from('tma_evidences')
+      .select('investigation_cost')
+      .eq('id', evidenceId)
+      .single();
+
+    const cost = evidence?.investigation_cost ?? 1;
+
+    // 3. Descontar IP al iniciador
     const { data: charData } = await supabase
       .from('tma_characters')
       .select('investigation_points')
@@ -88,11 +97,11 @@ export async function resolvePoll(pollId: string, status: 'ACCEPTED' | 'REJECTED
     if (charData) {
       await supabase
         .from('tma_characters')
-        .update({ investigation_points: Math.max(0, charData.investigation_points - 1) })
+        .update({ investigation_points: Math.max(0, charData.investigation_points - cost) })
         .eq('id', initiatorId);
     }
 
-    // 3. Añadir al Log de Investigación
+    // 4. Añadir al Log de Investigación
     await supabase
       .from('tma_character_evidences')
       .insert({
