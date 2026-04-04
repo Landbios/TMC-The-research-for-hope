@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useTmaStore } from '@/store/useTmaStore';
-import { TMACharacterData, TMAGameState } from '@/features/characters/api';
+import { TMACharacterData, TMAGameState, getTmaCharacterById } from '@/features/characters/api';
 
 interface StateInitializerProps {
   gameState: TMAGameState | null;
@@ -21,24 +21,32 @@ export function TmaStoreInitializer({ gameState, character, userRole }: StateIni
         store.setGameState(gameState);
       }
       
-      // PERSISTENCE LOGIC: Check if we are possessing someone
-      const possessedId = typeof window !== 'undefined' ? localStorage.getItem('tma_possessed_id') : null;
-      
-      if (character) {
-        // If we have a possessed ID, we set that as the current ID but still sync the original data to the store
-        // so we know which character is the "real" one.
-        store.setCharacterData(character);
+      const setupPossession = async () => {
+        const possessedId = typeof window !== 'undefined' ? localStorage.getItem('tma_possessed_id') : null;
         
-        if (possessedId && (userRole === 'staff' || userRole === 'superadmin')) {
-           store.setMyCharacterId(possessedId);
+        if (character) {
+          store.setCharacterData(character);
         }
-      }
 
-      if (userRole) {
-        store.setUserRole(userRole);
-      }
-      
-      store.setStoreInitialized(true);
+        if (possessedId && (userRole === 'staff' || userRole === 'superadmin')) {
+          try {
+            const npcChar = await getTmaCharacterById(possessedId);
+            if (npcChar) {
+              store.setPossession(npcChar);
+            }
+          } catch (err) {
+            console.error('TMA_SYSTEM: Error restoring possession:', err);
+          }
+        }
+
+        if (userRole) {
+          store.setUserRole(userRole);
+        }
+        
+        store.setStoreInitialized(true);
+      };
+
+      setupPossession();
       initialized.current = true;
     }
   }, [gameState, character, userRole]);

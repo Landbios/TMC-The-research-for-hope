@@ -19,6 +19,7 @@ export function GlobalPollOverlay() {
   const isAssassinPollActive = useTmaStore(state => state.isAssassinPollActive);
   const isBodyDiscoveryActive = useTmaStore(state => state.isBodyDiscoveryActive);
   const isStoreInitialized = useTmaStore(state => state.isStoreInitialized);
+  const userRole = useTmaStore(state => state.userRole);
 
   // 1. Suscripción en tiempo real al estado global del juego (Singleton ID=1)
   useEffect(() => {
@@ -253,7 +254,7 @@ export function GlobalPollOverlay() {
       )}
 
       {/* ASSASSIN POLL UI */}
-      {isAssassinPollActive && !activePoll && isVolunteer === null && (
+      {isAssassinPollActive && !activePoll && isVolunteer === null && userRole === 'roleplayer' && (
         <div className="pointer-events-auto w-full max-w-md bg-black border-2 border-red-500 shadow-[0_0_60px_rgba(239,68,68,0.6)] animate-pulse relative overflow-hidden">
            <div className="bg-red-900/40 text-red-500 p-2 font-mono text-[10px] text-center uppercase tracking-widest border-b border-red-500/50">
               ！！ blackout protocol: intention established ！！
