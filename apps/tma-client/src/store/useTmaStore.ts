@@ -29,6 +29,7 @@ interface TmaStoreState {
   
   // Local Player Context
   investigationPoints: number;
+  murderPoints: number;
   characterStatus: 'ALIVE' | 'DEAD' | 'MISSING' | 'GUILTY';
   myCharacterId: string | null;
   userRole: 'roleplayer' | 'staff' | 'superadmin';
@@ -63,6 +64,8 @@ interface TmaStoreState {
   setUserRole: (role: 'roleplayer' | 'staff' | 'superadmin') => void;
   setActivePoll: (poll: TMAEvidencePoll | null) => void;
   setActivePrivacyPoll: (poll: TMARoomPrivacyPoll | null) => void;
+  setMyCharacterId: (id: string | null) => void;
+  resetToInitial: () => void;
 }
 
 export const useTmaStore = create<TmaStoreState>((set) => ({
@@ -71,6 +74,7 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
   isBodyDiscoveryActive: false,
   isAssassinPollActive: false,
   investigationPoints: 7,
+  murderPoints: 0,
   characterStatus: 'ALIVE',
   myCharacterId: null,
   userRole: 'roleplayer',
@@ -95,6 +99,7 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
   
   setCharacterData: (char) => set({
     investigationPoints: char.investigation_points ?? 7,
+    murderPoints: char.murder_points ?? 0,
     characterStatus: char.status ?? 'ALIVE',
     myCharacterId: char.id,
   }),
@@ -127,5 +132,13 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
   toggleNervalis: (open) => set((state) => ({ isNervalisOpen: open ?? !state.isNervalisOpen })),
   setUserRole: (role) => set({ userRole: role }),
   setActivePoll: (poll) => set({ activePoll: poll }),
-  setActivePrivacyPoll: (poll) => set({ activePrivacyPoll: poll })
+  setActivePrivacyPoll: (poll) => set({ activePrivacyPoll: poll }),
+  setMyCharacterId: (id) => set({ myCharacterId: id }),
+  resetToInitial: () => set({ 
+    myCharacterId: null, 
+    investigationPoints: 7, 
+    murderPoints: 0, 
+    characterStatus: 'ALIVE',
+    selectedRoomId: null 
+  })
 }));

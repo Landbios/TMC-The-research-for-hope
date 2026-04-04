@@ -24,6 +24,7 @@ interface Evidence {
 interface Room {
   id: string;
   name: string;
+  is_invisible: boolean;
 }
 
 export function AdminRoomEditor() {
@@ -91,7 +92,11 @@ export function AdminRoomEditor() {
             className="bg-black border border-red-500/30 text-red-500 font-mono text-xs p-2 outline-none w-48"
           >
             <option value="">-- SELECCIONAR --</option>
-            {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+            {rooms.map(r => (
+              <option key={r.id} value={r.id}>
+                {r.name} {r.is_invisible ? ' [HIDDEN]' : ''}
+              </option>
+            ))}
           </select>
         </div>
 

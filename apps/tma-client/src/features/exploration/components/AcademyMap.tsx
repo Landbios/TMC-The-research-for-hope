@@ -18,21 +18,40 @@ const MAP_LAYOUTS: Record<string, { position: [number, number, number], size: [n
   'Capilla': { position: [-8, 0, 0], size: [6, 1, 8], color: '#7a3b9a' }
 };
 
+interface RoomMapData {
+  id: string;
+  name: string;
+  position: [number, number, number];
+  size: [number, number, number];
+  color: string;
+}
+
 export function AcademyMap() {
-  const controlsRef = useRef<any>(null);
-  const [rooms, setRooms] = useState<any[]>([]);
+  const controlsRef = useRef<any>(null); // OrbitControls from drei is complex to type, keeping any for now but could use OrbitControlsType
+  const [rooms, setRooms] = useState<RoomMapData[]>([]);
   const gamePeriod = useTmaStore((state) => state.gamePeriod);
   const setSelectedRoomId = useTmaStore((state) => state.setSelectedRoomId);
   const setVnState = useTmaStore((state) => state.setVnState);
+  
+  const userRole = useTmaStore((state) => state.userRole);
   
   useEffect(() => {
     let mounted = true;
     const fetchRooms = async () => {
       const supabase = createClient();
       const { data } = await supabase.from('tma_rooms').select('*');
+      
       if (data && mounted) {
-        const mappedRooms = data.map(r => ({
-          id: r.id, // Supabase UUID
+        // Filtrar salas invisibles si el usuario no es admin/staff
+        const filteredData = data.filter(r => {
+          if (r.is_invisible) {
+            return userRole === 'staff' || userRole === 'superadmin';
+          }
+          return true;
+        });
+
+        const mappedRooms = filteredData.map(r => ({
+          id: r.id, 
           name: r.name,
           position: MAP_LAYOUTS[r.name]?.position || [0, 0, 10],
           size: MAP_LAYOUTS[r.name]?.size || [4, 1, 4],
@@ -43,7 +62,7 @@ export function AcademyMap() {
     };
     fetchRooms();
     return () => { mounted = false; };
-  }, []);
+  }, [userRole]);
 
   const isNight = gamePeriod === 'NIGHTTIME';
   const ambientColor = isNight ? '#ff4040' : '#ffffff';

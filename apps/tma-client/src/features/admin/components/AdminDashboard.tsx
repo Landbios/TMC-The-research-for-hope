@@ -5,7 +5,14 @@ import Link from 'next/link';
 import { Shield, Users, Map as MapIcon, Database } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminRoomEditor } from './AdminRoomEditor';
-import { getAllVolunteers, resetAllInvestigationPoints, updateAssassinPollStatus, selectRandomAssassin } from '../api';
+import { AdminCharacterPossessor } from './AdminCharacterPossessor';
+import { 
+  getAllVolunteers, 
+  resetAllInvestigationPoints, 
+  updateAssassinPollStatus, 
+  selectRandomAssassin,
+  ensureMurderRoom
+} from '../api';
 import { getGameState } from '@/features/characters/api';
 import type { TMACharacterData } from '@/features/characters/api';
 
@@ -18,11 +25,15 @@ export function AdminDashboard({ userRole }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<'rooms' | 'polls' | 'users'>('rooms');
   const [volunteers, setVolunteers] = useState<TMACharacterData[]>([]);
   const [isPollActive, setIsPollActive] = useState(false);
+  const [isBodyDiscoveryActive, setIsBodyDiscoveryActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     getGameState().then(state => {
-      if (state) setIsPollActive(state.assassin_poll_active);
+      if (state) {
+        setIsPollActive(state.assassin_poll_active);
+        setIsBodyDiscoveryActive(state.body_discovery_active);
+      }
     });
   }, []);
 
@@ -70,22 +81,52 @@ export function AdminDashboard({ userRole }: AdminDashboardProps) {
     }
   };
 
-  const handleSelectAssassin = async () => {
-    if (volunteers.length === 0) {
-       toast.error('No hay voluntarios registrados para el proceso de selección.');
-       return;
-    }
+  const handleToggleBodyDiscovery = async () => {
     setIsLoading(true);
     try {
-      const selected = await selectRandomAssassin();
-      toast.success(`PROTOCOLO COMPLETADO: El asesino seleccionado es ${selected.tma_name}`, {
-        duration: 10000,
-        description: 'Se ha enviado una notificación privada al agresor.',
-      });
-      setIsPollActive(false);
-      setVolunteers([]);
+      const newState = !isBodyDiscoveryActive;
+      // Reutilizamos updateGameState del api de characters ya que es genérico
+      const { updateGameState: updateGame } = await import('@/features/characters/api');
+      await updateGame({ body_discovery_active: newState });
+      setIsBodyDiscoveryActive(newState);
+      
+      if (newState) {
+        toast.error('！！！ ALERTA DE DESCUBRIMIENTO PROVOCADA ！！！', {
+          duration: 8000,
+          description: 'Protocolo de inspección de cadáver activado para todos los estudiantes.',
+        });
+      } else {
+        toast.info('Protocolo de descubrimiento desactivado.');
+      }
     } catch (e) {
-      toast.error('Error en la selección: ' + e);
+      toast.error('Error al cambiar protocolo: ' + e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSelectAssassin = async () => {
+    if (!confirm('¿Confirmar selección aleatoria de asesino entre los voluntarios?')) return;
+    setIsLoading(true);
+    try {
+      await selectRandomAssassin();
+      toast.success('Asesino seleccionado y notificado.');
+    } catch (e) {
+      toast.error('Error al seleccionar asesino: ' + e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleInitializeCoordination = async () => {
+    setIsLoading(true);
+    try {
+      await ensureMurderRoom();
+      toast.success('HABITACIÓN DE COORDINACIÓN INICIALIZADA.', {
+        description: 'La sala invisible ha sido creada o verificada.'
+      });
+    } catch (e) {
+      toast.error('Error al inicializar sala: ' + e);
     } finally {
       setIsLoading(false);
     }
@@ -200,19 +241,43 @@ export function AdminDashboard({ userRole }: AdminDashboardProps) {
 
            {activeTab === 'users' && (
               <div className="flex flex-col space-y-6">
-                 <h2 className="text-xl font-bold border-b border-red-500/30 pb-2 font-mono">ESTADO GLOBAL DE LA ACADEMIA</h2>
+                 <h2 className="text-xl font-bold border-b border-red-500/30 pb-2 font-mono uppercase tracking-widest flex items-center gap-2">
+                   <Database size={20} className="text-red-500" /> ESTADO GLOBAL DE LA ACADEMIA
+                 </h2>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="sci-border border-red-500/30 p-4 bg-red-500/5">
                        <h3 className="font-mono text-xs mb-4 opacity-70 underline uppercase">GESTIÓN DE RECURSOS</h3>
+                       <div className="space-y-4">
+                         <button 
+                           disabled={isLoading}
+                           onClick={handleResetPoints}
+                           className="w-full py-3 bg-red-500/10 text-red-500 border border-red-500/50 font-mono text-xs uppercase hover:bg-red-500 hover:text-white transition-all shadow-[0_0_10px_rgba(239,68,68,0.2)]"
+                         >
+                            RESET PUNTAJE DE INVESTIGACIÓN (7 IP)
+                         </button>
+                         
+                         <button 
+                           disabled={isLoading}
+                           onClick={handleInitializeCoordination}
+                           className="w-full py-3 bg-zinc-900 text-zinc-400 border border-zinc-700 font-mono text-xs uppercase hover:bg-zinc-800 hover:text-white transition-all"
+                         >
+                            INICIALIZAR SALA DE COORDINACIÓN (HIDDEN)
+                         </button>
+                       </div>
+                       <p className="mt-2 font-mono text-[9px] opacity-40 mb-6">
+                          Configuración de parámetros globales y salas de sistema.
+                       </p>
+
+                       <h3 className="font-mono text-xs mb-4 opacity-70 underline uppercase text-red-500">EVENTOS ESPECIALES</h3>
                        <button 
                          disabled={isLoading}
-                         onClick={handleResetPoints}
-                         className="w-full py-3 bg-red-500/10 text-red-500 border border-red-500/50 font-mono text-xs uppercase hover:bg-red-500 hover:text-white transition-all shadow-[0_0_10px_rgba(239,68,68,0.2)]"
+                         onClick={handleToggleBodyDiscovery}
+                         className={`w-full py-3 font-mono text-xs uppercase transition-all shadow-[0_0_20px_rgba(239,68,68,0.3)] border ${isBodyDiscoveryActive ? 'bg-red-600 text-white border-white animate-pulse' : 'bg-black text-red-600 border-red-600 hover:bg-red-950'}`}
                        >
-                          RESET PUNTAJE DE INVESTIGACIÓN (7 IP)
+                          {isBodyDiscoveryActive ? 'DESACTIVAR PROTOCOLO DE CUERPO' : 'ACTIVAR DESCUBRIMIENTO DE CUERPO'}
                        </button>
                        <p className="mt-2 font-mono text-[9px] opacity-40">
-                          Restaura los puntos de todos los estudiantes ALIVE a su valor predeterminado.
+                          Activa la alerta visual de &quot;Un cuerpo ha sido descubierto&quot; para todos los estudiantes en tiempo real.
                        </p>
                     </div>
                  </div>
@@ -222,15 +287,15 @@ export function AdminDashboard({ userRole }: AdminDashboardProps) {
 
         {/* RIGHT PANEL: SIDE CONTROLS */}
         <div className="flex flex-col gap-6">
-           <div className="sci-border p-4 bg-black/60 backdrop-blur min-h-[200px]">
-              <h3 className="font-mono text-xs border-b border-(--glow)/30 pb-2 mb-4">| TERMINAL DE CONTROL_R_01</h3>
+           <AdminCharacterPossessor />
+
+           <div className="sci-border p-4 bg-black/60 backdrop-blur min-h-[150px]">
+              <h3 className="font-mono text-xs border-b border-(--glow)/30 pb-2 mb-4 text-red-500/80">| ESTADO DEL SISTEMA</h3>
               <div className="text-[10px] font-mono text-(--glow)/70 space-y-2">
                  <p>SYS_ST: ONLINE</p>
                  <p>NET_LATENCY: 12ms</p>
-                 <p>ROOM_COUNT: 5</p>
-                 <p>ACTIVE_SUBJECTS: 0</p>
-                 <div className="w-full h-1 bg-(--glow)/20 mt-4 overflow-hidden">
-                    <div className="w-full h-full bg-red-500/50 animate-pulse shadow-[0_0_5px_red]" />
+                 <div className="w-full h-0.5 bg-(--glow)/10 mt-4 overflow-hidden">
+                    <div className="w-1/2 h-full bg-red-500/50 animate-pulse shadow-[0_0_5px_red]" />
                  </div>
               </div>
            </div>

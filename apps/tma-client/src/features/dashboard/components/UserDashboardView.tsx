@@ -1,10 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Battery } from 'lucide-react';
+import { Battery, Skull } from 'lucide-react';
 import { DashboardHudStats } from '@/features/dashboard/components/DashboardHudStats';
 import { DashboardPistasButton } from '@/features/dashboard/components/DashboardPistasButton';
+import { AssassinShopOverlay } from '@/features/dashboard/components/AssassinShopOverlay';
+import { useTmaStore } from '@/store/useTmaStore';
 import type { TMACharacterData } from '@/features/characters/api';
 
 interface UserDashboardViewProps {
@@ -12,6 +15,9 @@ interface UserDashboardViewProps {
 }
 
 export function UserDashboardView({ character }: UserDashboardViewProps) {
+  const [isShopOpen, setIsShopOpen] = useState(false);
+  const murderPoints = useTmaStore(state => state.murderPoints);
+  
   const finalName = character.tmc_character?.name || character.tma_name || 'UNKNOWN SUBJECT';
   const finalImageUrl = character.tmc_character?.image_url || character.image_url;
   const inceptDate = character.created_at ? new Date(character.created_at).toLocaleDateString() : 'UNKNOWN';
@@ -138,10 +144,21 @@ export function UserDashboardView({ character }: UserDashboardViewProps) {
                </div>
              </Link>
 
-             <button className="sci-border p-2 flex flex-col items-center justify-center hover:bg-(--glow)/5 group h-full">
-               <span className="font-mono text-[9px] opacity-80 self-start"> [ REGLAMENTO ] </span>
-               <div className="w-8 h-10 border border-(--glow) mt-2 relative" />
-             </button>
+              {murderPoints > 0 ? (
+                <button 
+                  onClick={() => setIsShopOpen(true)}
+                  className="sci-border p-2 flex flex-col items-center justify-center bg-red-950/20 border-red-600/50 hover:bg-red-600/20 transition-all group h-full shadow-[0_0_15px_rgba(220,38,38,0.2)]"
+                >
+                  <span className="font-mono text-[9px] text-red-500 self-start font-bold"> [ OPERACIONES ] </span>
+                  <Skull className="w-10 h-10 text-red-600 mt-2 animate-pulse group-hover:scale-110 transition-transform" />
+                  <span className="font-mono text-[8px] text-red-500/70 mt-1 uppercase">Protocolo Blackout</span>
+                </button>
+              ) : (
+                <button className="sci-border p-2 flex flex-col items-center justify-center hover:bg-(--glow)/5 group h-full">
+                  <span className="font-mono text-[9px] opacity-80 self-start"> [ REGLAMENTO ] </span>
+                  <div className="w-8 h-10 border border-(--glow) mt-2 relative" />
+                </button>
+              )}
 
              <DashboardPistasButton />
            </div>
@@ -155,6 +172,7 @@ export function UserDashboardView({ character }: UserDashboardViewProps) {
          </p>
       </div>
 
+      {isShopOpen && <AssassinShopOverlay onClose={() => setIsShopOpen(false)} />}
     </div>
   );
 }

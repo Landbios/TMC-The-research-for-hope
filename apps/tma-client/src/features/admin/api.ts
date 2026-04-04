@@ -138,3 +138,40 @@ export async function selectRandomAssassin() {
   return selectedAssassin;
 }
 
+export async function createTmaRoom(room: { name: string; is_invisible?: boolean }) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('tma_rooms')
+    .insert(room)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function ensureMurderRoom() {
+  const supabase = createClient();
+  
+  // 1. Verificar si ya existe
+  const { data: existing } = await supabase
+    .from('tma_rooms')
+    .select('id')
+    .eq('name', 'COORDINACIÓN DE ASESINATO')
+    .single();
+
+  if (existing) return existing.id;
+
+  // 2. Crear si no existe
+  const { data: newRoom, error } = await supabase
+    .from('tma_rooms')
+    .insert({
+      name: 'COORDINACIÓN DE ASESINATO',
+      is_invisible: true
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return newRoom.id;
+}

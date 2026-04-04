@@ -17,6 +17,7 @@ export function GlobalPollOverlay() {
   const [totalStudents, setTotalStudents] = useState(0);
    const [isVolunteer, setIsVolunteer] = useState<boolean | null>(null);
   const isAssassinPollActive = useTmaStore(state => state.isAssassinPollActive);
+  const isBodyDiscoveryActive = useTmaStore(state => state.isBodyDiscoveryActive);
 
   // 1. Suscripción en tiempo real al estado global del juego (Singleton ID=1)
   useEffect(() => {
@@ -113,7 +114,44 @@ export function GlobalPollOverlay() {
   const canResolve = activePoll ? (activePoll.yes_count >= majority || activePoll.no_count >= majority || (activePoll.yes_count + activePoll.no_count >= totalStudents)) : false;
 
   return (
-    <div className="fixed inset-0 z-[9999] pointer-events-none flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-9999 pointer-events-none flex items-center justify-center p-4">
+      {/* BODY DISCOVERY OVERLAY */}
+      {isBodyDiscoveryActive && (
+         <div className="fixed inset-0 bg-red-950/40 backdrop-blur-sm z-50 flex items-center justify-center animate-glitch-heavy overflow-hidden pointer-events-auto">
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-30"></div>
+            <div className="absolute inset-0 bg-linear-to-b from-red-600/20 via-transparent to-red-600/20 animate-scanline"></div>
+            
+            <div className="relative w-full py-12 bg-black border-y-4 border-red-600 shadow-[0_0_100px_rgba(239,68,68,0.8)] flex flex-col items-center gap-6">
+               <div className="flex gap-4 animate-pulse">
+                  <div className="w-4 h-12 bg-red-600"></div>
+                  <div className="w-1 h-12 bg-red-600"></div>
+                  <div className="w-8 h-12 bg-red-600"></div>
+               </div>
+               
+               <h2 className="font-cinzel text-4xl md:text-6xl text-white text-center uppercase tracking-[0.2em] drop-shadow-[0_0_20px_rgba(255,255,255,0.5)]">
+                  ！！ CUERPO DESCUBIERTO ！！
+               </h2>
+               
+               <div className="py-2 px-8 bg-red-600 text-black font-mono font-black text-sm uppercase tracking-[0.5em] animate-bounce">
+                  blackout protocol active: investigation required
+               </div>
+
+               <div className="flex gap-1">
+                  {[...Array(20)].map((_, i) => (
+                     <div key={i} className="w-2 h-1 bg-red-600/40"></div>
+                  ))}
+               </div>
+            </div>
+
+            {/* Cinematic text bits */}
+            <div className="absolute bottom-10 left-10 font-mono text-[10px] text-red-500/60 uppercase flex flex-col gap-1">
+               <p>STATUS: UNKNOWN_VICTIM_DETECTED</p>
+               <p>LOCATION: SCANNING_ACADEMY_GROUNDS...</p>
+               <p>TIME_LOG: {new Date().toLocaleTimeString()}</p>
+            </div>
+         </div>
+      )}
+
       {/* INVESTIGATION POLL UI */}
       {activePoll && activePoll.evidence && (
         <div className="pointer-events-auto w-full max-w-md bg-zinc-950 border-2 border-red-600 shadow-[0_0_50px_rgba(239,68,68,0.4)] animate-glitch-entry relative overflow-hidden">

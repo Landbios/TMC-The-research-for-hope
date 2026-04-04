@@ -32,10 +32,12 @@ export interface TMACharacterData {
   
   // V2 Stats
   investigation_points: number;
+  murder_points: number;
   status: 'ALIVE' | 'DEAD' | 'MISSING' | 'GUILTY';
   current_room_id?: string;
   is_hidden?: boolean;
   is_volunteer: boolean | null;
+  is_npc: boolean;
 
   // Campos anidados si se hace join con character_category general
   tmc_character?: CharacterData;
@@ -153,6 +155,7 @@ export async function updateGameState(updates: Partial<TMAGameState>): Promise<v
 }
 
 // Actualiza el estado de voluntario para un personaje (Roleplayer)
+// Actualiza el estado de voluntario para un personaje (Roleplayer)
 export async function updateVolunteerStatus(characterId: string, is_volunteer: boolean): Promise<void> {
   const supabase = createClient();
 
@@ -163,3 +166,37 @@ export async function updateVolunteerStatus(characterId: string, is_volunteer: b
 
   if (error) throw error;
 }
+
+export async function getTmaNpcs(): Promise<TMACharacterData[]> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('tma_characters')
+    .select(`
+      *,
+      tmc_character:tmc_character_id (*)
+    `)
+    .eq('is_npc', true)
+    .order('tma_name', { ascending: true });
+
+  if (error || !data) return [];
+  return data as TMACharacterData[];
+}
+
+// Obtiene un personaje específico por ID
+export async function getTmaCharacterById(id: string): Promise<TMACharacterData | null> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('tma_characters')
+    .select(`
+      *,
+      tmc_character:tmc_character_id (*)
+    `)
+    .eq('id', id)
+    .single();
+
+  if (error || !data) return null;
+  return data as TMACharacterData;
+}
+
