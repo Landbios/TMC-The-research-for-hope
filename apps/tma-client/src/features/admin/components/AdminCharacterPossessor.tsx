@@ -11,7 +11,7 @@ export function AdminCharacterPossessor() {
   const [npcs, setNpcs] = useState<TMACharacterData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const myCharacterId = useTmaStore(state => state.myCharacterId);
-  const setCharacterData = useTmaStore(state => state.setCharacterData);
+  const setPossession = useTmaStore(state => state.setPossession);
   const userRole = useTmaStore(state => state.userRole);
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export function AdminCharacterPossessor() {
       setIsLoading(true);
       const npcData = await getTmaCharacterById(npcId);
       if (npcData) {
-        setCharacterData(npcData);
+        setPossession(npcData);
         toast.success(`POSESIÓN COMPLETADA: Ahora controlas a ${npcData.tma_name}`);
       }
     } catch (error) {

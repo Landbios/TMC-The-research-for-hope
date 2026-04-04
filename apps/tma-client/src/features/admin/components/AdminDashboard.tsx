@@ -6,6 +6,7 @@ import { Shield, Users, Map as MapIcon, Database } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminRoomEditor } from './AdminRoomEditor';
 import { AdminCharacterPossessor } from './AdminCharacterPossessor';
+import { AdminNpcCreator } from './AdminNpcCreator';
 import { 
   getAllVolunteers, 
   resetAllInvestigationPoints, 
@@ -16,13 +17,12 @@ import {
 import { getGameState } from '@/features/characters/api';
 import type { TMACharacterData } from '@/features/characters/api';
 
-
 interface AdminDashboardProps {
   userRole: string;
 }
 
 export function AdminDashboard({ userRole }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'rooms' | 'polls' | 'users'>('rooms');
+  const [activeTab, setActiveTab] = useState<'rooms' | 'polls' | 'users' | 'npcs'>('rooms');
   const [volunteers, setVolunteers] = useState<TMACharacterData[]>([]);
   const [isPollActive, setIsPollActive] = useState(false);
   const [isBodyDiscoveryActive, setIsBodyDiscoveryActive] = useState(false);
@@ -177,6 +177,13 @@ export function AdminDashboard({ userRole }: AdminDashboardProps) {
              <Database className="w-4 h-4 inline-block mr-2" />
              ESTADO GLOBAL
           </button>
+          <button 
+            onClick={() => setActiveTab('npcs')}
+            className={`px-4 py-2 border transition-all cursor-pointer ${activeTab === 'npcs' ? 'border-red-500 bg-red-500/10 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)]' : 'border-(--glow)/30 opacity-60 hover:opacity-100 hover:bg-(--glow)/5 text-(--glow)'}`}
+          >
+             <Users className="w-4 h-4 inline-block mr-2" />
+             GESTOR DE NPCS
+          </button>
         </div>
       </div>
 
@@ -282,6 +289,9 @@ export function AdminDashboard({ userRole }: AdminDashboardProps) {
                     </div>
                  </div>
               </div>
+           )}
+           {activeTab === 'npcs' && (
+              <AdminNpcCreator />
            )}
         </div>
 

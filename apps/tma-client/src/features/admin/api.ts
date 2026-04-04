@@ -175,3 +175,31 @@ export async function ensureMurderRoom() {
   if (error) throw error;
   return newRoom.id;
 }
+
+export async function createTmaNpc(npc: {
+  tma_name: string;
+  tma_title: string;
+  tma_biography: string;
+  image_url: string;
+  sprite_idle_url?: string;
+  status?: 'ALIVE' | 'DEAD' | 'MISSING' | 'GUILTY';
+}) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('NO_AUTH_SESSION');
+
+  const { data, error } = await supabase
+    .from('tma_characters')
+    .insert({
+      ...npc,
+      user_id: user.id,
+      is_npc: true,
+      investigation_points: 7,
+      murder_points: 0
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}

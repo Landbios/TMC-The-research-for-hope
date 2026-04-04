@@ -18,6 +18,7 @@ export function GlobalPollOverlay() {
    const [isVolunteer, setIsVolunteer] = useState<boolean | null>(null);
   const isAssassinPollActive = useTmaStore(state => state.isAssassinPollActive);
   const isBodyDiscoveryActive = useTmaStore(state => state.isBodyDiscoveryActive);
+  const isStoreInitialized = useTmaStore(state => state.isStoreInitialized);
 
   // 1. Suscripción en tiempo real al estado global del juego (Singleton ID=1)
   useEffect(() => {
@@ -49,17 +50,17 @@ export function GlobalPollOverlay() {
         .eq('status', 'ALIVE');
       setTotalStudents(count || 1);
 
-      if (myCharacterId) {
+      if (myCharacterId && isStoreInitialized) {
         const char = await getTMACharacter();
         if (char) setIsVolunteer(char.is_volunteer);
       }
     };
     
     if (activePoll || isAssassinPollActive) {
-      fetchData();
+      if (isStoreInitialized) fetchData();
       setHasVoted(false);
     }
-  }, [activePoll, isAssassinPollActive, myCharacterId]);
+  }, [activePoll, isAssassinPollActive, myCharacterId, isStoreInitialized]);
 
   const handleVolunteerChoice = async (choice: boolean) => {
     if (!myCharacterId) return;
@@ -71,6 +72,7 @@ export function GlobalPollOverlay() {
     }
   };
 
+  if (!isStoreInitialized) return null;
   if (!isAssassinPollActive && (!activePoll || !activePoll.evidence)) return null;
 
   const handleVote = async (vote: boolean) => {

@@ -39,7 +39,7 @@ export function PrivacyPollModal() {
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [activePrivacyPoll?.status, setActivePrivacyPoll]);
+  }, [activePrivacyPoll, setActivePrivacyPoll]);
 
   if (!activePrivacyPoll || !myCharacterId) return null;
 
@@ -81,7 +81,7 @@ export function PrivacyPollModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm pointer-events-none">
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm pointer-events-none">
       <div className="pointer-events-auto w-full max-w-sm bg-[#050505] border border-blue-500 shadow-[0_0_30px_rgba(59,130,246,0.3)] p-6 relative overflow-hidden animate-in fade-in zoom-in duration-300">
         
         {/* CRT Overlay */}

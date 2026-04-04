@@ -27,7 +27,8 @@ interface RoomMapData {
 }
 
 export function AcademyMap() {
-  const controlsRef = useRef<any>(null); // OrbitControls from drei is complex to type, keeping any for now but could use OrbitControlsType
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const controlsRef = useRef<any>(null); 
   const [rooms, setRooms] = useState<RoomMapData[]>([]);
   const gamePeriod = useTmaStore((state) => state.gamePeriod);
   const setSelectedRoomId = useTmaStore((state) => state.setSelectedRoomId);

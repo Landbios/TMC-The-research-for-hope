@@ -42,11 +42,11 @@ export function NervalisOverlay() {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[300] bg-black flex flex-col animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-300 bg-black flex flex-col animate-in fade-in duration-300">
       
       {/* Esquinas CRT / Glitch frame */}
       <div className="absolute inset-0 pointer-events-none crt-scanline opacity-20"></div>
-      <div className="absolute inset-0 pointer-events-none border-[20px] border-black z-50"></div>
+      <div className="absolute inset-0 pointer-events-none border-20 border-black z-50"></div>
 
       {/* Top Header Terminal */}
       <div className="h-14 bg-zinc-900/80 border-b border-blue-500/30 flex items-center justify-between px-8 relative z-20">
