@@ -67,7 +67,7 @@ export function AdminDashboardView({ initialCharacters }: AdminDashboardViewProp
 
       {/* Grid de Estudiantes */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {characters.map((char) => (
+        {characters.filter(char => !char.is_npc).map((char) => (
           <div 
             key={char.id} 
             className={`sci-border p-4 bg-zinc-950/50 relative overflow-hidden transition-all border-l-4 ${

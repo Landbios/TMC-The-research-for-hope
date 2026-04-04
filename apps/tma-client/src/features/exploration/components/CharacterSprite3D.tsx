@@ -91,38 +91,40 @@ export function CharacterSprite3D({ id, name, imageUrl, position, onClick, onJoi
 
           {/* Chat Público en Burbuja 3D */}
           {publicMessage && (
-             <group position={[0, 3.5, 0]}>
+             <group position={[0, 3.8, 0.2]}>
                {/* Tronco de Burbuja (Borde Glow) */}
-               <mesh position={[0, 0, -0.01]}>
-                 <planeGeometry args={[Math.min(8, Math.max(3, publicMessage.length * 0.15)) + 0.1, 1.3]} />
+               <mesh position={[0, 0, -0.05]}>
+                 <planeGeometry args={[Math.min(8, Math.max(3, publicMessage.length * 0.18)) + 0.15, 1.4]} />
                  <meshBasicMaterial color="#3b82f6" opacity={0.8} transparent />
                </mesh>
                {/* Fondo de Burbuja Negro */}
-               <mesh>
-                 <planeGeometry args={[Math.min(8, Math.max(3, publicMessage.length * 0.15)), 1.2]} />
-                 <meshBasicMaterial color="#000000" opacity={0.95} transparent />
+               <mesh position={[0, 0, -0.04]}>
+                 <planeGeometry args={[Math.min(8, Math.max(3, publicMessage.length * 0.18)), 1.3]} />
+                 <meshBasicMaterial color="#000000" opacity={0.9} transparent />
                </mesh>
                
                {/* Sombra del texto */}
                <Text
-                 position={[-0.02, -0.02, 0.005]}
-                 fontSize={0.25}
+                 position={[-0.03, -0.03, 0.02]}
+                 fontSize={0.28}
                  color="#000000"
                  maxWidth={7.5}
                  textAlign="center"
+                 anchorY="middle"
                >
                  {publicMessage}
                </Text>
                
-                {/* Texto Glow Azul */}
+                {/* Texto Glow Azul (Visibilidad Máxima) */}
                 <Text
-                  position={[0, 0, 0.01]}
-                  fontSize={0.25}
-                  color="#dbeafe"
+                  position={[0, 0, 0.05]}
+                  fontSize={0.28}
+                  color="#ffffff"
                   outlineColor="#3b82f6"
-                  outlineWidth={0.015}
+                  outlineWidth={0.02}
                   maxWidth={7.5}
                   textAlign="center"
+                  anchorY="middle"
                 >
                   {publicMessage}
                 </Text>
@@ -148,7 +150,6 @@ export function CharacterSprite3D({ id, name, imageUrl, position, onClick, onJoi
                   <Text
                     fontSize={0.2}
                     color="#ffffff"
-                    font="/fonts/inter-bold.woff" // Asumiendo que existe o usando default
                     anchorX="center"
                     anchorY="middle"
                   >

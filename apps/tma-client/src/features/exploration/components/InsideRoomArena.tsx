@@ -104,7 +104,7 @@ export function InsideRoomArena() {
 
       const { data } = await supabase.from('tma_characters').select('*').eq('current_room_id', roomId);
       if (data && mounted) {
-        setCharacters(data.filter(c => c.id !== currentCharacterId && !c.is_hidden) as TMACharacterData[]);
+        setCharacters(data.filter(c => !c.is_hidden) as TMACharacterData[]);
       }
 
       if (mounted) {
@@ -120,17 +120,18 @@ export function InsideRoomArena() {
            const char = payload.new as TMACharacterData | undefined;
            if (!char) return; 
 
-           // Jamás renderizamos nuestra propia entidad en 3D
-            if (char.id === currentCharacterId) return;
-
-            if (char.current_room_id === roomId && !char.is_hidden) {
-               setCharacters(prev => {
-                  if(prev.find(c => c.id === char.id)) return prev.map(c => c.id === char.id ? char : c);
-                  return [...prev, char];
-               });
-            } else {
-               setCharacters(prev => prev.filter(c => c.id !== char.id));
-            }
+            // Permitimos que todos los personajes entren en el estado local 
+            // (incluyendo al usuario actual para trackear burbujas/estados temporales)
+             if (char.current_room_id === roomId) {
+                setCharacters(prev => {
+                   if(prev.find(c => c.id === char.id)) {
+                      return prev.map(c => c.id === char.id ? { ...c, ...char } : c);
+                   }
+                   return [...prev, char];
+                });
+             } else {
+                setCharacters(prev => prev.filter(c => c.id !== char.id));
+             }
           })
          .subscribe();
 
@@ -197,26 +198,24 @@ export function InsideRoomArena() {
                  sprite_url: spriteUrl
               });
            }
-           else if (!msg.is_whisper && !msg.is_system_message) {
+            else if (!msg.is_whisper && !msg.is_system_message) {
               // 1. Burbujas flotantes 3D
-              if (msg.sender_tma_id !== currentCharacterId) {
+              setCharacters(prev => prev.map(c => {
+                 if (c.id === msg.sender_tma_id) {
+                    return { ...c, publicMessage: msg.content };
+                 }
+                 return c;
+              }));
+              
+              setTimeout(() => {
+                 if (!mounted) return;
                  setCharacters(prev => prev.map(c => {
-                    if (c.id === msg.sender_tma_id) {
-                       return { ...c, publicMessage: msg.content };
+                    if (c.id === msg.sender_tma_id && c.publicMessage === msg.content) {
+                       return { ...c, publicMessage: undefined };
                     }
                     return c;
                  }));
-                 
-                 setTimeout(() => {
-                    if (!mounted) return;
-                    setCharacters(prev => prev.map(c => {
-                       if (c.id === msg.sender_tma_id && c.publicMessage === msg.content) {
-                          return { ...c, publicMessage: undefined };
-                       }
-                       return c;
-                    }));
-                 }, 8000);
-              }
+              }, 8000);
 
               // 2. Ruteo a Conversación Grupal VN
               let senderName = 'Estudiante';
@@ -337,19 +336,27 @@ export function InsideRoomArena() {
           <Suspense fallback={null}>
             <RoomCube />
             
-            {characters.map((char, index) => (
-              <Suspense key={char.id} fallback={null}>
-                <CharacterSprite3D
-                  id={char.id}
-                  name={char.tma_name || 'Estudiante'}
-                  imageUrl={char.sprite_idle_url || char.image_url || PLACEHOLDER_IMG_1}
-                  position={getPositionForIndex(index)}
-                  publicMessage={char.publicMessage} 
-                  onClick={handleCharacterClick}
-                  onJoinGroup={handleJoinGroup}
-                />
-              </Suspense>
-            ))}
+            {characters.map((char, index) => {
+              // REGLA: No renderizamos nuestro propio avatar en 3D (Primera Persona)
+              if (char.id === myCharacterId) return null;
+              
+              // REGLA: No renderizamos personajes ocultos (Sigilo)
+              if (char.is_hidden) return null;
+              
+              return (
+                <Suspense key={char.id} fallback={null}>
+                  <CharacterSprite3D
+                    id={char.id}
+                    name={char.tma_name || 'Estudiante'}
+                    imageUrl={char.sprite_idle_url || char.image_url || PLACEHOLDER_IMG_1}
+                    position={getPositionForIndex(index)}
+                    publicMessage={char.publicMessage} 
+                    onClick={handleCharacterClick}
+                    onJoinGroup={handleJoinGroup}
+                  />
+                </Suspense>
+              );
+            })}
 
             {clues.map((clue) => (
               <Suspense key={clue.id} fallback={null}>

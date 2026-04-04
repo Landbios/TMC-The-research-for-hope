@@ -61,7 +61,24 @@ export async function getTMACharacter(): Promise<TMACharacterData | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data, error } = await supabase
+  // 1. INTENTAMOS BUSCAR UN PC (No NPC) - NUEVA LÓGICA DE FALLBACK
+  const { data: pcData } = await supabase
+    .from('tma_characters')
+    .select(`
+      *,
+      tmc_character:tmc_character_id (
+        id, name, image_url, character_category, age, height, nationality, created_at
+      )
+    `)
+    .eq('user_id', user.id)
+    .eq('is_npc', false)
+    .limit(1)
+    .maybeSingle();
+
+  if (pcData) return pcData as TMACharacterData;
+
+  // 2. FALLBACK: Si no tiene PC declarado (común en nuevos Staff), agarramos el primero que tenga aunque sea NPC o null
+  const { data: fallbackData } = await supabase
     .from('tma_characters')
     .select(`
       *,
@@ -71,10 +88,9 @@ export async function getTMACharacter(): Promise<TMACharacterData | null> {
     `)
     .eq('user_id', user.id)
     .limit(1)
-    .single();
+    .maybeSingle();
 
-  if (error || !data) return null;
-  return data as TMACharacterData;
+  return fallbackData as TMACharacterData | null;
 }
 
 // Trae todos los personajes que tiene creados el usuario en TMC Vault general
