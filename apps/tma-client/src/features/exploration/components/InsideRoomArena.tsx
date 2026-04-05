@@ -16,8 +16,13 @@ import { getRoomClues, TMAEvidence } from '@/features/investigation/api';
 import { PrivacyPollModal } from './PrivacyPollModal';
 import { StealthEntryDialog } from './StealthEntryDialog';
 import { startPrivacyPoll, updateRoomPrivacy } from '../privacy_api';
-import { Zap, Shield, ShieldOff } from 'lucide-react';
+import { Zap, Shield, ShieldOff, ShieldAlert, ShoppingBag } from 'lucide-react';
 import { toast } from 'sonner';
+import { AssassinInvitePanel } from './AssassinInvitePanel';
+import { AssassinShopOverlay } from '@/features/dashboard/components/AssassinShopOverlay';
+import { useRouter } from 'next/navigation';
+import { AdminEvidenceModal } from '@/features/admin/components/AdminEvidenceModal';
+import { Edit3, Skull } from 'lucide-react';
 
 const PLACEHOLDER_IMG_1 = 'https://picsum.photos/seed/dangan1/400/600';
 
@@ -37,6 +42,17 @@ export function InsideRoomArena() {
   const [showStealthEntry, setShowStealthEntry] = useState(false);
   const [isStealthing, setIsStealthing] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [isMurderRoom, setIsMurderRoom] = useState(false);
+  const [isCrimeScene, setIsCrimeScene] = useState(false);
+  const [showInvitePanel, setShowInvitePanel] = useState(false);
+  const router = useRouter();
+  const [roomMetadata, setRoomMetadata] = useState<{ 
+    coordination_stage: 'PLANNING' | 'PREPARATION' | 'EXECUTION' | 'FINISHED';
+    target_murder_room_id: string | null;
+  } | null>(null);
+  const [showAssassinShop, setShowAssassinShop] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingEvidence, setEditingEvidence] = useState<TMAEvidence | null>(null);
 
   const gamePeriod = useTmaStore((state) => state.gamePeriod);
   const vnState = useTmaStore((state) => state.vnState);
@@ -56,6 +72,8 @@ export function InsideRoomArena() {
   const activePrivacyPoll = useTmaStore((state) => state.activePrivacyPoll);
   const myCharacterId = useTmaStore((state) => state.myCharacterId);
   const setSelectedRoomId = useTmaStore((state) => state.setSelectedRoomId);
+  const userRole = useTmaStore((state) => state.userRole);
+  const isAssassin = useTmaStore((state) => state.isAssassin);
   
   const isNight = gamePeriod === 'NIGHTTIME';
 
@@ -64,25 +82,70 @@ export function InsideRoomArena() {
      charactersRef.current = characters;
   }, [characters]);
 
-  // 2. Efecto de Verificación Inicial (Privacidad / Sigilo)
+  // 2. Efecto de Verificación Inicial (Privacidad / Sigilo / SEGURIDAD)
   useEffect(() => {
     if (!roomId || roomId === 'UNKNOWN_SECTOR' || !myCharacterId) return;
     
     const checkRoomEntry = async () => {
-       const supabase = createClient();
-       const { data: roomData } = await supabase.from('tma_rooms').select('is_private').eq('id', roomId).single();
-       if (roomData) setIsPrivate(roomData.is_private);
+        const supabase = createClient();
+        const isStaff = userRole === 'staff' || userRole === 'superadmin';
 
-       if (roomData?.is_private && !isStealthing) {
-          setShowStealthEntry(true);
-       } else {
-          // Si no hay necesidad de sigilo, actualizamos nuestra ubicación directamente
-          await supabase.from('tma_characters').update({ current_room_id: roomId, is_hidden: false }).eq('id', myCharacterId);
-       }
+        // 1. Obtener datos de la sala actual y de la sala de coordinación global
+        const { data: currentRoom } = await supabase.from('tma_rooms').select('is_private, name').eq('id', roomId).single();
+        const { data: coordRoom } = await supabase.from('tma_rooms').select('id, name, target_murder_room_id, coordination_stage').eq('name', 'COORDINACIÓN DE ASESINATO').maybeSingle();
+
+        if (currentRoom) {
+           setIsPrivate(currentRoom.is_private);
+           const isCoord = currentRoom.name === 'COORDINACIÓN DE ASESINATO';
+           setIsMurderRoom(isCoord);
+           
+           const isTarget = coordRoom?.target_murder_room_id === roomId;
+           setIsCrimeScene(isTarget);
+
+           // --- LÓGICA DE BLOQUEO DE SEGURIDAD ---
+           
+           // Regla A: Sala de Coordinación
+           if (isCoord) {
+              if (isStaff) { /* Permitir siempre */ }
+              else if (isAssassin) {
+                 if (coordRoom?.coordination_stage === 'FINISHED') {
+                    toast.success("PROTOCOLO FINALIZADO. EXPEDIENTE SELLADO.");
+                    try {
+                      router.push('/map');
+                    } catch (err) {
+                      console.error(err);
+                    }
+                    return;
+                 }
+              } else {
+                 toast.error("ÁREA RESTRINGIDA: Acceso solo para personal autorizado.");
+                 router.push('/exploration');
+                 return;
+              }
+           }
+
+           // Regla B: Sala del Crimen (Mantenimiento)
+           if (isTarget) {
+              if (!isStaff && !isAssassin) {
+                 toast.error("SALA BLOQUEADA POR MANTENIMIENTO", {
+                    description: "Se están realizando labores técnicas en esta zona. Por favor, utiliza otro sector."
+                 });
+                 router.push('/exploration');
+                 return;
+              }
+           }
+        }
+
+        // Si pasó los filtros, manejar privacidad/sigilo
+        if (currentRoom?.is_private && !isStealthing) {
+           setShowStealthEntry(true);
+        } else {
+           await supabase.from('tma_characters').update({ current_room_id: roomId, is_hidden: false }).eq('id', myCharacterId);
+        }
     };
     
     checkRoomEntry();
-  }, [roomId, myCharacterId, isStealthing]);
+  }, [roomId, myCharacterId, isStealthing, userRole, router, isAssassin]);
 
   // 3. Efecto de Suscripciones en Tiempo Real (Estable)
   useEffect(() => {
@@ -149,13 +212,34 @@ export function InsideRoomArena() {
         })
         .subscribe();
 
-      // 3. Suscripción a la propia Sala (Estado de Privacidad)
+       // 3. Suscripción a la propia Sala (Estado de Privacidad y Fases de Coordinación)
       supabase.channel(`room_meta_${roomId}_${Date.now()}`)
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tma_rooms', filter: `id=eq.${roomId}` }, (payload) => {
-           const room = payload.new as { is_private: boolean };
-           if (mounted) setIsPrivate(room.is_private);
+           const room = payload.new as { 
+              is_private: boolean; 
+              coordination_stage: 'PLANNING' | 'PREPARATION' | 'EXECUTION' | 'FINISHED'; 
+              target_murder_room_id: string | null 
+           };
+           if (mounted) {
+              setIsPrivate(room.is_private);
+              setRoomMetadata({
+                 coordination_stage: room.coordination_stage || 'PLANNING',
+                 target_murder_room_id: room.target_murder_room_id
+              });
+           }
         })
         .subscribe();
+      
+      const fetchRoomMeta = async () => {
+         const { data } = await supabase.from('tma_rooms').select('coordination_stage, target_murder_room_id').eq('id', roomId).single();
+         if (data && mounted) {
+            setRoomMetadata({
+               coordination_stage: data.coordination_stage || 'PLANNING',
+               target_murder_room_id: data.target_murder_room_id
+            });
+         }
+      };
+      fetchRoomMeta();
 
       // 4. Suscripción a Mensajes (Burbujas Flotantes y VN-UI)
       supabase.channel(`chat_messages_${roomId}_${Date.now()}`)
@@ -362,7 +446,14 @@ export function InsideRoomArena() {
               <Suspense key={clue.id} fallback={null}>
                 <EvidenceSprite3D 
                   evidence={clue} 
-                  onClick={(ev) => handleClueDiscovery(ev)} 
+                  isEditMode={isEditMode}
+                  onClick={(ev) => {
+                    if (isEditMode) {
+                      setEditingEvidence(ev);
+                    } else {
+                      handleClueDiscovery(ev);
+                    }
+                  }} 
                 />
               </Suspense>
             ))}
@@ -440,9 +531,55 @@ export function InsideRoomArena() {
          </div>
       )}
 
+      {/* HUD de Fase de Coordinación (Solo en el cuarto secreto) */}
+      {isMurderRoom && roomMetadata && (
+         <div className="absolute top-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-50 pointer-events-none">
+            <div className="flex items-center gap-1 bg-black/80 border border-zinc-800 p-1 rounded-sm pointer-events-auto">
+               {(['PLANNING', 'PREPARATION', 'EXECUTION', 'FINISHED'] as ('PLANNING' | 'PREPARATION' | 'EXECUTION' | 'FINISHED')[]).map((stage) => (
+                  <div 
+                    key={stage}
+                    className={`px-4 py-1 font-mono text-[9px] uppercase tracking-widest transition-all ${
+                       roomMetadata.coordination_stage === stage 
+                        ? 'bg-red-600 text-black font-bold' 
+                        : 'text-zinc-600'
+                    }`}
+                  >
+                     {stage === 'PLANNING' ? 'Planteamiento' : stage === 'PREPARATION' ? 'Preparación' : stage === 'EXECUTION' ? 'Ejecución' : 'Finalizado'}
+                  </div>
+               ))}
+            </div>
+            
+            {roomMetadata.coordination_stage === 'EXECUTION' && (
+               <div className="px-3 py-1 bg-red-600/10 border border-red-500/30 backdrop-blur-md rounded-full animate-pulse">
+                  <span className="font-mono text-[10px] text-red-500 uppercase tracking-widest font-bold">
+                     Protocolo de Asalto: Ejecución Permitida
+                  </span>
+               </div>
+            )}
+
+            {isCrimeScene && (
+               <div className="px-3 py-1 bg-yellow-600/10 border border-yellow-500/30 backdrop-blur-md rounded-full shadow-[0_0_15px_rgba(202,138,4,0.2)]">
+                  <span className="font-mono text-[10px] text-yellow-500 uppercase tracking-widest font-bold flex items-center gap-2">
+                     <Skull size={12} /> ZONA EN MANTENIMIENTO TÁCTICO
+                  </span>
+               </div>
+            )}
+         </div>
+      )}
+
       {/* Botones de Control de Sala */}
       {(!vnState.isActive) && (
         <div className="absolute top-24 right-6 flex flex-col gap-2 z-50">
+           {/* Renderizado por fases de coordinación: Tienda de Asesino (Solo en fase EXECUTION para el asesino) */}
+           {isMurderRoom && roomMetadata?.coordination_stage === 'EXECUTION' && useTmaStore.getState().isAssassin && (
+              <button 
+                onClick={() => setShowAssassinShop(true)}
+                className="pointer-events-auto p-4 border-2 border-red-600 bg-black/90 text-red-600 hover:bg-red-600 hover:text-black transition-all flex items-center gap-3 font-mono text-xs font-bold uppercase shadow-[0_0_30px_rgba(220,38,38,0.4)] animate-glitch-entry"
+              >
+                <ShoppingBag size={18} /> ABRIR TIENDA DE ASESINATO
+              </button>
+           )}
+
            {characters.length > 0 && !activePrivacyPoll && !isPrivate && (
               <button 
                 onClick={handleProposePrivacy}
@@ -460,7 +597,51 @@ export function InsideRoomArena() {
                  <ShieldOff size={14} /> Desactivar Privacidad
               </button>
            )}
+
+           {/* ADMIN TOOLS */}
+           {(userRole === 'staff' || userRole === 'superadmin') && (
+              <button 
+                onClick={() => setIsEditMode(!isEditMode)}
+                className={`pointer-events-auto p-3 border flex items-center gap-2 font-mono text-[10px] uppercase shadow-lg transition-all ${isEditMode ? 'bg-red-600 border-white text-white' : 'bg-black/80 border-zinc-700 text-zinc-400 hover:text-white'}`}
+              >
+                 <Edit3 size={14} />
+                 {isEditMode ? 'MODO EDICIÓN: ON' : 'EDITAR PISTAS'}
+              </button>
+           )}
+
+           {isMurderRoom && (userRole === 'staff' || userRole === 'superadmin') && roomMetadata?.coordination_stage !== 'FINISHED' && (
+              <button 
+                onClick={() => setShowInvitePanel(!showInvitePanel)}
+                className="pointer-events-auto p-3 border border-red-500/50 bg-black/80 text-red-500 hover:bg-red-500 hover:text-black transition-all flex items-center gap-2 font-mono text-[10px] uppercase shadow-[0_0_15px_rgba(239,68,68,0.2)]"
+              >
+                <ShieldAlert size={14} /> {showInvitePanel ? 'Cerrar Gestión' : 'Invitar Asesino'}
+              </button>
+           )}
         </div>
+      )}
+
+      {showInvitePanel && isMurderRoom && (
+         <div className="absolute top-24 left-6 z-50 max-h-[calc(100vh-120px)] overflow-y-auto custom-scrollbar">
+            <AssassinInvitePanel 
+               roomId={roomId}
+               currentStage={roomMetadata?.coordination_stage || 'PLANNING'}
+               onClose={() => setShowInvitePanel(false)} 
+            />
+         </div>
+      )}
+
+      {showAssassinShop && (
+         <AssassinShopOverlay onClose={() => setShowAssassinShop(false)} />
+      )}
+
+      {editingEvidence && (
+         <AdminEvidenceModal 
+           evidence={editingEvidence} 
+           onClose={() => setEditingEvidence(null)}
+           onUpdate={() => {
+             window.location.reload();
+           }}
+         />
       )}
     </>
   );

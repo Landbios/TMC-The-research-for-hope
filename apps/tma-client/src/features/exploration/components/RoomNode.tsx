@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, Suspense } from 'react';
 import { useFrame, ThreeEvent } from '@react-three/fiber';
 import { useTmaStore } from '@/store/useTmaStore';
 import * as THREE from 'three';
@@ -12,9 +12,10 @@ interface RoomNodeProps {
   position: [number, number, number];
   size: [number, number, number];
   color: string;
+  isBlocked: boolean;
 }
 
-export function RoomNode({ id, name, position, size, color }: RoomNodeProps) {
+export function RoomNode({ id, name, position, size, color, isBlocked }: RoomNodeProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
   
@@ -59,17 +60,39 @@ export function RoomNode({ id, name, position, size, color }: RoomNodeProps) {
         />
       </mesh>
       
+      {isBlocked && (
+        <group position={[0, (size[1] / 2) + 0.8, 0]}>
+           <mesh>
+              <sphereGeometry args={[0.3, 16, 16]} />
+              <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={2} />
+           </mesh>
+           <Suspense fallback={null}>
+             <Text
+                position={[0, 0.6, 0]}
+                fontSize={0.3}
+                color="#ff0000"
+                maxWidth={2}
+                rotation={[-Math.PI / 2, 0, 0]}
+             >
+                MANTENIMIENTO / AREA BLOQUEADA
+             </Text>
+           </Suspense>
+        </group>
+      )}
+ 
       {/* Etiqueta flotante superior */}
-      <Text 
-        position={[0, (size[1] / 2) + 0.1, 0]} 
-        fontSize={0.4} 
-        color="#ffffff" 
-        outlineColor="#000000" 
-        outlineWidth={0.04}
-        rotation={[-Math.PI / 2, 0, 0]}
-      >
-        {name}
-      </Text>
+      <Suspense fallback={null}>
+        <Text 
+          position={[0, (size[1] / 2) + 0.1, 0]} 
+          fontSize={0.4} 
+          color="#ffffff" 
+          outlineColor="#000000" 
+          outlineWidth={0.04}
+          rotation={[-Math.PI / 2, 0, 0]}
+        >
+          {name}
+        </Text>
+      </Suspense>
     </group>
   );
 }

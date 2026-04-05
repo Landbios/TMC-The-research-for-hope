@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { RoomNode } from './RoomNode';
@@ -8,15 +8,22 @@ import { CameraController } from './CameraController';
 import { useTmaStore } from '@/store/useTmaStore';
 import { createClient } from '@/lib/supabase/client';
 
-// Distribución basada en el modelo Blender
+// Distribución basada en el modelo Blender (Normalizado para comparaciones)
 const MAP_LAYOUTS: Record<string, { position: [number, number, number], size: [number, number, number], color: string }> = {
-  'Lobby Principal': { position: [0, 0, -8], size: [8, 1, 6], color: '#4a7af2' },
-  'Habitaciones': { position: [0, 0, 0], size: [6, 1, 4], color: '#d9cd5b' },
-  'Lavandería': { position: [0, 0, 6], size: [6, 1, 4], color: '#d66a93' },
-  'Baños': { position: [0, 0, 12], size: [4, 1, 4], color: '#7bc98f' },
-  'Cafetería': { position: [8, 0, 0], size: [6, 1, 8], color: '#bc5b12' },
-  'Capilla': { position: [-8, 0, 0], size: [6, 1, 8], color: '#7a3b9a' }
+  'LOBBY PRINCIPAL': { position: [0, 0, -8], size: [8, 1, 6], color: '#4a7af2' },
+  'HABITACIONES': { position: [0, 0, 0], size: [6, 1, 4], color: '#d9cd5b' },
+  'LAVANDERIA': { position: [0, 0, 6], size: [6, 1, 4], color: '#d66a93' },
+  'BANOS': { position: [0, 0, 12], size: [4, 1, 4], color: '#7bc98f' },
+  'CAFETERIA': { position: [8, 0, 0], size: [6, 1, 8], color: '#bc5b12' },
+  'CAPILLA': { position: [-8, 0, 0], size: [6, 1, 8], color: '#7a3b9a' }
 };
+
+function normalizeName(name: string) {
+  return name.toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Eliminar acentos
+    .trim();
+}
 
 interface RoomMapData {
   id: string;
@@ -24,6 +31,7 @@ interface RoomMapData {
   position: [number, number, number];
   size: [number, number, number];
   color: string;
+  isBlocked: boolean;
 }
 
 export function AcademyMap() {
@@ -40,24 +48,63 @@ export function AcademyMap() {
     let mounted = true;
     const fetchRooms = async () => {
       const supabase = createClient();
-      const { data } = await supabase.from('tma_rooms').select('*');
+      console.log('TMA_MAP: Fetching rooms... UserRole:', userRole);
+      const { data, error } = await supabase.from('tma_rooms').select('*');
       
+      if (error) {
+        console.error('TMA_MAP: Error fetching rooms:', error);
+        return;
+      }
+
       if (data && mounted) {
-        // Filtrar salas invisibles si el usuario no es admin/staff
+        console.log(`TMA_MAP: Received ${data.length} rooms from DB.`);
+
+        // Filtrar salas: La coordinación de asesinato solo la ven Staff o el Asesino asignado
+        const isStaff = userRole === 'staff' || userRole === 'superadmin';
+        const myChar = useTmaStore.getState().originalCharacter;
+        const isAssassin = myChar?.is_assassin || false;
+
         const filteredData = data.filter(r => {
-          if (r.is_invisible) {
-            return userRole === 'staff' || userRole === 'superadmin';
+          if (r.name === 'COORDINACIÓN DE ASESINATO') {
+            if (isStaff) return true;
+            // Para el asesino: Mostrar solo si NO está terminado
+            return isAssassin && r.coordination_stage !== 'FINISHED';
           }
           return true;
-        });
+        }); 
+        
+        console.log(`TMA_MAP: Rendering ${filteredData.length} rooms.`);
 
-        const mappedRooms = filteredData.map(r => ({
-          id: r.id, 
-          name: r.name,
-          position: MAP_LAYOUTS[r.name]?.position || [0, 0, 10],
-          size: MAP_LAYOUTS[r.name]?.size || [4, 1, 4],
-          color: MAP_LAYOUTS[r.name]?.color || '#ffffff'
-        }));
+        const { data: blockedRoomsData } = await supabase.from('tma_rooms').select('target_murder_room_id').not('target_murder_room_id', 'is', null);
+        const blockedIds = new Set(blockedRoomsData?.map(r => r.target_murder_room_id) || []);
+
+        const mappedRooms = filteredData.map((r, index) => {
+          let displayName = r.name;
+          if (r.name === 'COORDINACIÓN DE ASESINATO') {
+             if (r.coordination_stage === 'PLANNING' && !isStaff) {
+                displayName = 'INVITACIÓN DE ASESINO';
+             }
+          }
+
+          const normName = normalizeName(displayName);
+          const layout = MAP_LAYOUTS[normName] || MAP_LAYOUTS[normalizeName(r.name)];
+          
+          // Si no hay layout, los esparcimos en un círculo para que no se solapen en [0,0,10]
+          const fallbackPos: [number, number, number] = layout ? layout.position : [
+            Math.cos(index) * 5, 
+            0, 
+            Math.sin(index) * 5
+          ];
+
+          return {
+            id: r.id, 
+            name: displayName,
+            position: fallbackPos,
+            size: layout?.size || [4, 1, 4],
+            color: layout?.color || '#ffffff',
+            isBlocked: blockedIds.has(r.id)
+          };
+        });
         setRooms(mappedRooms);
       }
     };
@@ -85,13 +132,11 @@ export function AcademyMap() {
         <directionalLight position={[10, 20, 10]} intensity={isNight ? 0.6 : 1.2} color={ambientColor} castShadow />
         {isNight && <pointLight position={[0, 4, 0]} color="#ff0000" intensity={2.5} distance={15} />}
 
-        <Suspense fallback={null}>
-          <group position={[0, 0, 0]}>
-            {rooms.map((room) => (
-              <RoomNode key={room.id} {...room} />
-            ))}
-          </group>
-        </Suspense>
+        <group position={[0, 0, 0]}>
+          {rooms.map((room) => (
+            <RoomNode key={room.id} {...room} />
+          ))}
+        </group>
 
         <OrbitControls 
           ref={controlsRef}
@@ -105,7 +150,23 @@ export function AcademyMap() {
         <CameraController controlsRef={controlsRef} roomData={rooms} />
         
         <gridHelper args={[50, 50, isNight ? '#550000' : '#003366', isNight ? '#330000' : '#001133']} position={[0, -0.5, 0]} />
+        
+        {/* Ground Plane para recibir luz */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.55, 0]} receiveShadow>
+          <planeGeometry args={[100, 100]} />
+          <meshStandardMaterial color={isNight ? '#050202' : '#02050a'} />
+        </mesh>
       </Canvas>
+
+      {/* Debug Overlay (Solo para Staff) */}
+      {(userRole === 'staff' || userRole === 'superadmin') && (
+        <div className="absolute bottom-4 left-4 z-50 bg-black/80 p-4 border border-blue-500 font-mono text-[10px] text-blue-400 pointer-events-none">
+          <p className="font-bold border-b border-blue-500/30 mb-2">DEBUG_MAP: {rooms.length} NODES</p>
+          <p>ROLE: {userRole?.toUpperCase()}</p>
+          <p>PERIOD: {gamePeriod}</p>
+          {rooms.length === 0 && <p className="text-red-500 animate-pulse">ALERTA: CERO SALAS DETECTADAS EN DB</p>}
+        </div>
+      )}
     </div>
   );
 }

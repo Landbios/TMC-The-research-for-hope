@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ShieldCheck, User, MapPin, Activity, Terminal } from 'lucide-react';
+import { useTmaStore } from '@/store/useTmaStore';
 import type { TMACharacterData } from '@/features/characters/api';
 import { createClient } from '@/lib/supabase/client';
 
@@ -12,6 +13,7 @@ interface AdminDashboardViewProps {
 }
 
 export function AdminDashboardView({ initialCharacters }: AdminDashboardViewProps) {
+  const myCharacterId = useTmaStore(state => state.myCharacterId);
   const [characters, setCharacters] = useState<TMACharacterData[]>(initialCharacters);
   const [rooms, setRooms] = useState<Record<string, string>>({});
 
@@ -67,7 +69,7 @@ export function AdminDashboardView({ initialCharacters }: AdminDashboardViewProp
 
       {/* Grid de Estudiantes */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {characters.filter(char => !char.is_npc).map((char) => (
+        {characters.filter(char => !char.is_npc || char.id === useTmaStore.getState().originalCharacter?.id).map((char) => (
           <div 
             key={char.id} 
             className={`sci-border p-4 bg-zinc-950/50 relative overflow-hidden transition-all border-l-4 ${

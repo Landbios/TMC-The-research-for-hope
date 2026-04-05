@@ -38,6 +38,7 @@ export interface TMACharacterData {
   is_hidden?: boolean;
   is_volunteer: boolean | null;
   is_npc: boolean;
+  is_assassin?: boolean;
 
   // Campos anidados si se hace join con character_category general
   tmc_character?: CharacterData;

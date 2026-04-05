@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Shield, Users, Map as MapIcon, Database } from 'lucide-react';
+import { Shield, Users, Map as MapIcon, Database, ShieldAlert, ShieldOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminRoomEditor } from './AdminRoomEditor';
 import { AdminCharacterPossessor } from './AdminCharacterPossessor';
 import { AdminNpcCreator } from './AdminNpcCreator';
+import { createClient } from '@/lib/supabase/client';
 import { 
   getAllVolunteers, 
   resetAllInvestigationPoints, 
@@ -22,11 +23,19 @@ interface AdminDashboardProps {
 }
 
 export function AdminDashboard({ userRole }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'rooms' | 'polls' | 'users' | 'npcs'>('rooms');
+  const [activeTab, setActiveTab] = useState<'rooms' | 'polls' | 'users' | 'npcs' | 'case'>('rooms');
   const [volunteers, setVolunteers] = useState<TMACharacterData[]>([]);
   const [isPollActive, setIsPollActive] = useState(false);
   const [isBodyDiscoveryActive, setIsBodyDiscoveryActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentCase, setCurrentCase] = useState<{
+    id: string;
+    target_murder_room_id: string | null;
+    coordination_stage: string;
+    murder_case_summary: string | null;
+    target_name?: string;
+  } | null>(null);
+  const [caseLogs, setCaseLogs] = useState<string[]>([]);
 
   useEffect(() => {
     getGameState().then(state => {
@@ -45,7 +54,80 @@ export function AdminDashboard({ userRole }: AdminDashboardProps) {
       getAllVolunteers().then(setVolunteers);
       return () => clearInterval(interval);
     }
+    
+    if (activeTab === 'case') {
+      loadCaseData();
+    }
   }, [activeTab]);
+
+  const loadCaseData = async () => {
+    setIsLoading(true);
+    try {
+      const supabase = createClient();
+      const { data: coordRoom } = await supabase
+        .from('tma_rooms')
+        .select('id, target_murder_room_id, coordination_stage, murder_case_summary, tma_rooms_target:target_murder_room_id(name)')
+        .eq('name', 'COORDINACIÓN DE ASESINATO')
+        .maybeSingle();
+
+      if (coordRoom) {
+        const targetObj = coordRoom.tma_rooms_target as any;
+        const targetName = Array.isArray(targetObj) ? targetObj[0]?.name : targetObj?.name;
+        
+        setCurrentCase({
+          id: coordRoom.id,
+          target_murder_room_id: coordRoom.target_murder_room_id,
+          coordination_stage: coordRoom.coordination_stage,
+          murder_case_summary: coordRoom.murder_case_summary,
+          target_name: targetName
+        });
+
+        const { data: logs } = await supabase
+          .from('tma_messages')
+          .select('content')
+          .eq('tma_room_id', coordRoom.id)
+          .ilike('content', '[SISTEMA - ACCIÓN DE TIENDA]%')
+          .order('created_at', { ascending: true });
+        
+        setCaseLogs(logs?.map(l => l.content) || []);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleReopenRoom = async () => {
+    if (!currentCase) return;
+    if (!confirm('¿Seguro que quieres reabrir la sala del crimen? Esto permitirá el acceso de nuevo pero conservará el informe en este panel.')) return;
+    setIsLoading(true);
+    try {
+      const { reopenCrimeScene } = await import('../api');
+      await reopenCrimeScene(currentCase.id);
+      toast.success('ZONA REABIERTA. MANTENIMIENTO FINALIZADO.');
+      loadCaseData();
+    } catch (e) {
+      toast.error('Error al reabrir: ' + e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResolveCase = async () => {
+    if (!currentCase) return;
+    if (!confirm('¿CONFIRMAR RESOLUCIÓN TOTAL? Esta acción: \n1. Borrará este informe.\n2. Quitará el rol de asesino.\n3. Borrará TODAS las pistas del mapa.\n\nEsta acción no se puede deshacer.')) return;
+    setIsLoading(true);
+    try {
+      const { resolveCurrentCase } = await import('../api');
+      await resolveCurrentCase(currentCase.id);
+      toast.success('SISTEMA LIMPIO: CASO ARCHIVADO Y RESETEADO.');
+      setCurrentCase(null);
+      setCaseLogs([]);
+    } catch (e) {
+      toast.error('Error al resolver caso: ' + e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleResetPoints = async () => {
     if (!confirm('¿Seguro que quieres resetear los puntos de investigación de todos?')) return;
@@ -171,6 +253,13 @@ export function AdminDashboard({ userRole }: AdminDashboardProps) {
              ELECCIÓN DE ASESINOS
           </button>
           <button 
+            onClick={() => setActiveTab('case')}
+            className={`px-4 py-2 border transition-all cursor-pointer ${activeTab === 'case' ? 'border-red-600 bg-red-600/20 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'border-(--glow)/30 opacity-60 hover:opacity-100 hover:bg-(--glow)/5 text-(--glow)'}`}
+          >
+             <Shield className="w-4 h-4 inline-block mr-2" />
+             CASO ACTUAL
+          </button>
+          <button 
             onClick={() => setActiveTab('users')}
             className={`px-4 py-2 border transition-all cursor-pointer ${activeTab === 'users' ? 'border-red-500 bg-red-500/10 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)]' : 'border-(--glow)/30 opacity-60 hover:opacity-100 hover:bg-(--glow)/5 text-(--glow)'}`}
           >
@@ -194,6 +283,70 @@ export function AdminDashboard({ userRole }: AdminDashboardProps) {
         <div className="sci-border bg-black/40 backdrop-blur-sm p-6 relative min-h-[500px]">
            {activeTab === 'rooms' && (
               <AdminRoomEditor />
+           )}
+
+           {activeTab === 'case' && (
+              <div className="flex flex-col space-y-6">
+                 <h2 className="text-xl font-bold border-b border-red-500/30 pb-2 font-mono flex items-center gap-3">
+                   <ShieldAlert className="text-red-500" /> EXPEDIENTE DE MANTENIMIENTO TÁCTICO
+                 </h2>
+                 
+                 {!currentCase?.target_murder_room_id ? (
+                    <div className="h-60 flex flex-col items-center justify-center opacity-30 font-mono text-sm uppercase">
+                       <ShieldOff size={40} className="mb-4" />
+                       No hay ningún operativo de asesinato en curso.
+                    </div>
+                 ) : (
+                    <div className="grid grid-cols-1 gap-6">
+                       <div className="sci-border border-red-500/40 p-5 bg-red-600/5">
+                          <label className="text-[10px] uppercase font-bold text-red-500 block mb-1">Zona Crítica en Mantenimiento:</label>
+                          <p className="text-lg font-mono font-bold text-white tracking-widest">{currentCase.target_name || 'Desconocida'}</p>
+                          <p className="text-[9px] font-mono opacity-50 uppercase mt-1">ID: {currentCase.target_murder_room_id}</p>
+                       </div>
+
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="flex flex-col gap-2">
+                             <label className="text-[10px] uppercase font-bold text-red-500">Resumen del Expediente (IA SCION):</label>
+                             <div className="bg-black/60 border border-red-500/20 p-4 font-mono text-[11px] leading-relaxed text-zinc-300 min-h-[150px] whitespace-pre-wrap">
+                                {currentCase.murder_case_summary || 'Generando informe de clausura...'}
+                             </div>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                             <label className="text-[10px] uppercase font-bold text-red-500">Log de Acciones del Sujeto:</label>
+                             <div className="bg-black/60 border border-red-500/20 p-4 font-mono text-[9px] max-h-[150px] overflow-y-auto space-y-2 text-zinc-400 custom-scrollbar">
+                                {caseLogs.length > 0 ? (
+                                   caseLogs.map((log, i) => <div key={i} className="border-l-2 border-red-900 pl-2">{log}</div>)
+                                ) : (
+                                   <p className="italic opacity-30">No se han registrado acciones tácticas.</p>
+                                )}
+                             </div>
+                          </div>
+                       </div>
+
+                        <div className="border-t border-red-500/20 pt-6 flex flex-col gap-4">
+                           <button 
+                             onClick={handleReopenRoom}
+                             disabled={isLoading}
+                             className="w-full py-4 bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 text-white font-mono text-xs font-bold uppercase tracking-[0.2em] transition-all"
+                           >
+                              Reabrir Área (Mantenimiento OFF)
+                           </button>
+
+                           <button 
+                             onClick={handleResolveCase}
+                             disabled={isLoading}
+                             className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-mono text-xs font-bold uppercase tracking-[0.3em] shadow-[0_0_30px_rgba(220,38,38,0.3)] transition-all font-bold"
+                           >
+                              CASO RESUELTO (RESET TOTAL)
+                           </button>
+
+                           <p className="text-center text-[9px] font-mono opacity-30 uppercase">
+                              Atención: &quot;Reabrir&quot; solo abre la sala. &quot;Resolver&quot; limpia todo el sistema para un nuevo caso.
+                           </p>
+                        </div>
+                    </div>
+                 )}
+              </div>
            )}
            
            {activeTab === 'polls' && (

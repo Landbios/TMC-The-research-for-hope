@@ -27,7 +27,13 @@ export function NervalisOverlay() {
         setLoading(true);
         getAllTMACharacters().then(data => {
           if (mounted) {
-            setStudents(data);
+            // Aseguramos que el originalCharacter esté presente si estamos poseyendo a alguien
+            const originalChar = useTmaStore.getState().originalCharacter;
+            let finalData = [...data];
+            if (originalChar && !data.find(c => c.id === originalChar.id)) {
+              finalData = [originalChar, ...data];
+            }
+            setStudents(finalData);
             setLoading(false);
           }
         });
@@ -132,12 +138,21 @@ export function NervalisOverlay() {
                         </div>
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pb-8">
-                           {students.map(student => (
-                              <button 
-                                key={student.id}
-                                onClick={() => setSelectedStudent(student)}
-                                className={`group relative sci-border p-3 text-left transition-all hover:bg-blue-500/10 ${selectedStudent?.id === student.id ? 'bg-blue-500/20 border-blue-500' : 'bg-black/40 border-blue-500/30'}`}
-                              >
+                           {students.map(student => {
+                             const isOriginal = student.id === useTmaStore.getState().originalCharacter?.id;
+                             return (
+                               <button 
+                                 key={student.id}
+                                 onClick={() => setSelectedStudent(student)}
+                                 className={`group relative sci-border p-3 text-left transition-all hover:bg-blue-500/10 ${
+                                   selectedStudent?.id === student.id ? 'bg-blue-500/20 border-blue-500' : 'bg-black/40 border-blue-500/30'
+                                 } ${isOriginal ? 'border-l-4 border-l-blue-400' : ''}`}
+                               >
+                                  {isOriginal && (
+                                    <div className="absolute -top-2 -left-2 bg-blue-500 text-black text-[7px] font-bold px-1 py-0.5 z-10 font-mono shadow-[0_0_10px_rgba(59,130,246,0.5)]">
+                                      REGISTRO_ORIGEN
+                                    </div>
+                                  )}
                                  <div className="flex gap-3 items-center">
                                     <div className="w-12 h-12 bg-zinc-900 border border-blue-500/20 shrink-0 relative overflow-hidden grayscale group-hover:grayscale-0 transition-all">
                                       {(student.image_url || student.tmc_character?.image_url) ? (
@@ -168,7 +183,7 @@ export function NervalisOverlay() {
                                    <div className="absolute top-1 right-1"><Activity size={10} className="text-amber-500 animate-pulse" /></div>
                                  )}
                               </button>
-                           ))}
+                           )})}
                         </div>
                       )}
                    </div>
@@ -190,43 +205,70 @@ export function NervalisOverlay() {
                             )}
                             <div className="absolute inset-0 bg-blue-500/10 mix-blend-color" />
                          </div>
-                         <div className="flex-1 grid grid-cols-2 gap-x-8 gap-y-3">
-                            <div className="col-span-2">
-                               <h3 className="font-mono text-lg font-bold text-blue-400 uppercase">
-                                  {selectedStudent.tmc_character?.name || selectedStudent.tma_name}
-                               </h3>
-                               <p className="font-mono text-xs text-blue-500/70 border-b border-blue-500/20 pb-2 uppercase">{selectedStudent.tma_title}</p>
-                            </div>
-                            <div className="space-y-1">
-                               <p className="font-mono text-[8px] text-zinc-500 uppercase">Estado Actual</p>
-                               <div className="flex items-center gap-2">
-                                  <div className={`w-2 h-2 rounded-full ${selectedStudent.status === 'ALIVE' ? 'bg-green-500' : 'bg-red-500'}`} />
-                                  <span className="font-mono text-xs text-zinc-300 uppercase">{selectedStudent.status}</span>
-                               </div>
-                            </div>
-                            <div className="space-y-1">
-                               <p className="font-mono text-[8px] text-zinc-500 uppercase">Localización</p>
-                               <div className="flex items-center gap-2">
-                                  <MapPin size={14} className="text-blue-500" />
-                                  <span className="font-mono text-xs text-zinc-300 uppercase">{selectedStudent.current_room_id || 'Fuera de Rango'}</span>
-                               </div>
-                            </div>
-                            <div className="space-y-1">
-                               <p className="font-mono text-[8px] text-zinc-500 uppercase">Puntos de Investigación</p>
-                               <div className="flex items-center gap-2">
-                                  <Activity size={14} className="text-red-500" />
-                                  <span className="font-mono text-xs text-zinc-300 uppercase">{selectedStudent.investigation_points} IP</span>
-                               </div>
-                            </div>
-                            <div className="space-y-1">
-                               <p className="font-mono text-[8px] text-zinc-500 uppercase">ID de Registro</p>
-                               <span className="font-mono text-[10px] text-zinc-500 uppercase">{selectedStudent.id.substring(0, 13)}...</span>
-                            </div>
-                            <div className="col-span-2 mt-2">
-                               <p className="font-mono text-[8px] text-zinc-500 uppercase mb-1">Archivo Biográfico</p>
-                               <p className="font-mono text-[10px] text-zinc-400 line-clamp-2 italic">{selectedStudent.tma_biography || 'Sin datos adicionales registrados.'}</p>
-                            </div>
-                         </div>
+                         <div className="flex-1 flex flex-col justify-between">
+                             <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+                                <div className="col-span-2">
+                                   <h3 className="font-mono text-lg font-bold text-blue-400 uppercase">
+                                      {selectedStudent.tmc_character?.name || selectedStudent.tma_name}
+                                   </h3>
+                                   <p className="font-mono text-xs text-blue-500/70 border-b border-blue-500/20 pb-2 uppercase">{selectedStudent.tma_title}</p>
+                                </div>
+                                <div className="space-y-1">
+                                   <p className="font-mono text-[8px] text-zinc-500 uppercase">Estado Actual</p>
+                                   <div className="flex items-center gap-2">
+                                      <div className={`w-2 h-2 rounded-full ${selectedStudent.status === 'ALIVE' ? 'bg-green-500' : 'bg-red-500'}`} />
+                                      <span className="font-mono text-xs text-zinc-300 uppercase">{selectedStudent.status}</span>
+                                   </div>
+                                </div>
+                                <div className="space-y-1">
+                                   <p className="font-mono text-[8px] text-zinc-500 uppercase">Localización</p>
+                                   <div className="flex items-center gap-2">
+                                      <MapPin size={14} className="text-blue-500" />
+                                      <span className="font-mono text-xs text-zinc-300 uppercase">{selectedStudent.current_room_id || 'Fuera de Rango'}</span>
+                                   </div>
+                                </div>
+                                <div className="space-y-1">
+                                   <p className="font-mono text-[8px] text-zinc-500 uppercase">Puntos de Investigación</p>
+                                   <div className="flex items-center gap-2">
+                                      <Activity size={14} className="text-red-500" />
+                                      <span className="font-mono text-xs text-zinc-300 uppercase">{selectedStudent.investigation_points} IP</span>
+                                   </div>
+                                </div>
+                                <div className="space-y-1">
+                                   <p className="font-mono text-[8px] text-zinc-500 uppercase">ID de Registro</p>
+                                   <span className="font-mono text-[10px] text-zinc-500 uppercase">{selectedStudent.id.substring(0, 13)}...</span>
+                                </div>
+                                <div className="col-span-2 mt-2">
+                                   <p className="font-mono text-[8px] text-zinc-500 uppercase mb-1">Archivo Biográfico</p>
+                                   <p className="font-mono text-[10px] text-zinc-400 line-clamp-2 italic">{selectedStudent.tma_biography || 'Sin datos adicionales registrados.'}</p>
+                                </div>
+                             </div>
+
+                             <div className="mt-4 pt-4 border-t border-blue-500/20 flex gap-4">
+                               <button 
+                                 onClick={() => {
+                                   useTmaStore.getState().setPossession(selectedStudent);
+                                   toast.success(`POSESIÓN INICIADA: ${selectedStudent.tmc_character?.name || selectedStudent.tma_name}`);
+                                   setSelectedStudent(null);
+                                 }}
+                                 className="flex-1 py-1.5 bg-blue-500/10 border border-blue-500/50 text-blue-400 font-mono text-[10px] uppercase hover:bg-blue-500 hover:text-black transition-all"
+                               >
+                                 Iniciar Posesión Neural
+                               </button>
+                               {useTmaStore.getState().myCharacterId === selectedStudent.id && (
+                                 <button 
+                                   onClick={() => {
+                                     useTmaStore.getState().setPossession(null);
+                                     toast.success('CONEXIÓN REESTABLECIDA CON PERSONAJE ORIGINAL');
+                                     setSelectedStudent(null);
+                                   }}
+                                   className="flex-1 py-1.5 bg-zinc-900 border border-zinc-700 text-zinc-400 font-mono text-[10px] uppercase hover:bg-zinc-800 hover:text-white transition-all"
+                                 >
+                                   Finalizar Posesión
+                                 </button>
+                               )}
+                             </div>
+                          </div>
                          <button 
                            onClick={() => setSelectedStudent(null)}
                            className="absolute top-2 right-2 text-zinc-600 hover:text-white"

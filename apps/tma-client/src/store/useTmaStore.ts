@@ -31,6 +31,7 @@ interface TmaStoreState {
   investigationPoints: number;
   murderPoints: number;
   characterStatus: 'ALIVE' | 'DEAD' | 'MISSING' | 'GUILTY';
+  isAssassin: boolean;
   myCharacterId: string | null;
   originalCharacter: TMACharacterData | null;
   userRole: 'roleplayer' | 'staff' | 'superadmin';
@@ -80,6 +81,7 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
   investigationPoints: 7,
   murderPoints: 0,
   characterStatus: 'ALIVE',
+  isAssassin: false,
   myCharacterId: null,
   originalCharacter: null,
   userRole: 'roleplayer',
@@ -103,13 +105,19 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
     isAssassinPollActive: state.assassin_poll_active,
   }),
   
-  setCharacterData: (char) => set((state) => ({
-    investigationPoints: char.investigation_points ?? 7,
-    murderPoints: char.murder_points ?? 0,
-    characterStatus: char.status ?? 'ALIVE',
-    myCharacterId: char.id,
-    originalCharacter: state.originalCharacter || char, // Persist the first one
-  })),
+  setCharacterData: (char) => set((state) => {
+    const isActuallyNpc = char.is_npc === true;
+    
+    return {
+      investigationPoints: char.investigation_points ?? 7,
+      murderPoints: char.murder_points ?? 0,
+      characterStatus: char.status ?? 'ALIVE',
+      isAssassin: char.is_assassin ?? false,
+      myCharacterId: char.id,
+      // Solo guardamos como original si es un PC (Jugador)
+      originalCharacter: !isActuallyNpc ? char : state.originalCharacter,
+    };
+  }),
 
   setPossession: (char) => {
     if (char) {
@@ -119,15 +127,24 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
         investigationPoints: char.investigation_points ?? 7,
         murderPoints: char.murder_points ?? 0,
         characterStatus: char.status ?? 'ALIVE',
+        isAssassin: char.is_assassin ?? false,
       });
     } else {
       localStorage.removeItem('tma_possessed_id');
-      set((state) => ({
-        myCharacterId: state.originalCharacter?.id || null,
-        investigationPoints: state.originalCharacter?.investigation_points ?? 7,
-        murderPoints: state.originalCharacter?.murder_points ?? 0,
-        characterStatus: state.originalCharacter?.status ?? 'ALIVE',
-      }));
+      set((state) => {
+        const target = state.originalCharacter;
+        if (!target) {
+          console.error('TMA_STORE: No hay personaje original para restaurar.');
+          return state;
+        }
+        return {
+          myCharacterId: target.id,
+          investigationPoints: target.investigation_points ?? 7,
+          murderPoints: target.murder_points ?? 0,
+          characterStatus: target.status ?? 'ALIVE',
+          isAssassin: target.is_assassin ?? false,
+        };
+      });
     }
   },
   
@@ -170,6 +187,7 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
       investigationPoints: 7, 
       murderPoints: 0, 
       characterStatus: 'ALIVE',
+      isAssassin: false,
       selectedRoomId: null,
       isStoreInitialized: false
     });

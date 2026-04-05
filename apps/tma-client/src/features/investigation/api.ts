@@ -5,7 +5,7 @@ export interface TMAEvidence {
   room_id: string;
   title: string;
   description_brief?: string;
-  description_detailed?: string;
+  description_full?: string;
   image_url?: string;
   investigation_cost: number;
   is_hidden: boolean;

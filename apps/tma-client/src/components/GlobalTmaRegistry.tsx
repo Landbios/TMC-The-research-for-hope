@@ -5,6 +5,7 @@ import { PollRealtimeListener } from '@/features/investigation/components/PollRe
 import { GlobalPollOverlay } from '@/features/dashboard/components/GlobalPollOverlay';
 import { GlobalCharacterListener } from './GlobalCharacterListener';
 import { StaffIdentitySwitcher } from '@/features/admin/components/StaffIdentitySwitcher';
+import { AssassinRevealOverlay } from '@/features/dashboard/components/AssassinRevealOverlay';
 import type { TMACharacterData, TMAGameState } from '@/features/characters/api';
 
 interface GlobalTmaRegistryProps {
@@ -28,6 +29,7 @@ export function GlobalTmaRegistry({ character, gameState, userRole }: GlobalTmaR
       <GlobalCharacterListener />
       <PollRealtimeListener />
       <GlobalPollOverlay />
+      <AssassinRevealOverlay />
       {(userRole === 'staff' || userRole === 'superadmin') && <StaffIdentitySwitcher />}
     </>
   );

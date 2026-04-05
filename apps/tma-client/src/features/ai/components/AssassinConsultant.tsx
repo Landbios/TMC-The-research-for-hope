@@ -66,10 +66,13 @@ export function AssassinConsultant({ roomId }: { roomId?: string }) {
                 <CheckCircle2 size={10} className="text-green-500" /> RECOMENDACIONES TÁCTICAS
              </div>
              <div className="grid grid-cols-1 gap-1.5">
-                {analysis.suggestions.map((s, idx) => (
-                  <div key={idx} className="flex items-start gap-2 bg-red-400/5 p-2 border border-red-400/10">
-                    <ChevronRight size={10} className="text-red-500 mt-0.5 shrink-0" />
-                    <span className="font-mono text-[9px] text-zinc-400 leading-none">{s}</span>
+                {analysis?.suggestedClues?.map((s, idx) => (
+                  <div key={idx} className="flex flex-col gap-1 bg-red-400/5 p-2 border border-red-400/10">
+                    <div className="flex items-start gap-2">
+                      <ChevronRight size={10} className="text-red-500 mt-0.5 shrink-0" />
+                      <span className="font-mono text-[9px] text-red-400 font-bold uppercase leading-none">{s.title}</span>
+                    </div>
+                    <span className="font-mono text-[8px] text-zinc-500 pl-4 leading-tight italic">{s.description_brief}</span>
                   </div>
                 ))}
              </div>

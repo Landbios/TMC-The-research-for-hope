@@ -6,7 +6,10 @@ import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { TMACharacterData } from '@/features/characters/api';
-import { Monitor, MonitorOff } from 'lucide-react';
+import { Monitor, MonitorOff, ShieldAlert } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ensureMurderRoom } from '@/features/admin/api';
+import { toast } from 'sonner';
 
 interface RoomNavigationProps {
   characters?: TMACharacterData[];
@@ -23,6 +26,11 @@ export function RoomNavigation({ characters = [] }: RoomNavigationProps) {
   const [isSending, setIsSending] = useState(false);
   const params = useParams();
   const roomId = params?.roomId as string;
+  const router = useRouter();
+   
+  const isAssassin = useTmaStore(state => state.isAssassin);
+  const userRole = useTmaStore(state => state.userRole);
+  const isStaff = userRole === 'staff' || userRole === 'superadmin';
 
   const handleSend = async () => {
     if (!text.trim() || !myCharacterId || !roomId || isSending) return;
@@ -47,6 +55,17 @@ export function RoomNavigation({ characters = [] }: RoomNavigationProps) {
     setIsSending(false);
   };
 
+  const handleEnterMurderRoom = async () => {
+     try {
+        const id = await ensureMurderRoom();
+        router.push(`/rooms/${id}`);
+        toast.success("CONDUCTO DE COORDINACIÓN ABIERTO");
+     } catch (err) {
+        console.error("Error entering murder room:", err);
+        toast.error("ERROR DE ACCESO");
+     }
+  };
+
   return (
     <div className="absolute inset-0 pointer-events-none flex flex-col justify-end z-45">
       {/* Si hacemos clic en un jugador, esto lo invoca */}
@@ -56,6 +75,17 @@ export function RoomNavigation({ characters = [] }: RoomNavigationProps) {
       {!vnState.isActive && (
          <div className="absolute bottom-6 md:bottom-8 right-6 pointer-events-auto flex items-stretch gap-2 animate-fade-in-up">
            
+           {/* BOTÓN SECRETO ASESINO / STAFF */}
+           {(isAssassin || isStaff) && (
+              <button 
+                onClick={handleEnterMurderRoom}
+                className="px-3 flex items-center justify-center border border-red-500 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300 shadow-[0_0_20px_rgba(239,68,68,0.4)] animate-pulse"
+                title="Entrar a Cámara de Coordinación"
+              >
+                <ShieldAlert size={18} />
+              </button>
+           )}
+
            {/* Toggle Modo VN (Charla Grupal) */}
            <button 
              onClick={() => setVnMode(vnMode === 'GROUP' ? 'WHISPER' : 'GROUP')}

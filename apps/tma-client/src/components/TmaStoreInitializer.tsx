@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useTmaStore } from '@/store/useTmaStore';
-import { TMACharacterData, TMAGameState, getTmaCharacterById } from '@/features/characters/api';
+import { TMACharacterData, TMAGameState, getTmaCharacterById, getTMACharacter } from '@/features/characters/api';
 
 interface StateInitializerProps {
   gameState: TMAGameState | null;
@@ -25,17 +25,22 @@ export function TmaStoreInitializer({ gameState, character, userRole }: StateIni
         const possessedId = typeof window !== 'undefined' ? localStorage.getItem('tma_possessed_id') : null;
         
         if (character) {
-          store.setCharacterData(character);
-        }
-
-        if (possessedId && (userRole === 'staff' || userRole === 'superadmin')) {
-          try {
-            const npcChar = await getTmaCharacterById(possessedId);
-            if (npcChar) {
-              store.setPossession(npcChar);
-            }
-          } catch (err) {
-            console.error('TMA_SYSTEM: Error restoring possession:', err);
+          // Si el personaje inicial no es un NPC, es nuestro original
+          if (!character.is_npc) {
+             store.setCharacterData(character);
+             // Si además había un ID de posesión en el storage, lo activamos ahora
+             if (possessedId && possessedId !== character.id && (userRole === 'staff' || userRole === 'superadmin')) {
+               getTmaCharacterById(possessedId).then(npc => {
+                 if (npc) store.setPossession(npc);
+               });
+             }
+          } else {
+             // Si el personaje inicial ES un NPC, necesitamos buscar el original real
+             getTMACharacter().then(pc => {
+               if (pc) store.setCharacterData(pc);
+               // Y mantenemos la posesión del NPC
+               store.setPossession(character);
+             });
           }
         }
 
