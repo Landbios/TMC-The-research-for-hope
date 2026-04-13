@@ -6,44 +6,67 @@ import { createClient } from '@/lib/supabase/client';
 import { TMAEvidencePoll } from '../api';
 
 export function PollRealtimeListener() {
-  const setActivePoll = useTmaStore(state => state.setActivePoll);
-  const activePoll = useTmaStore(state => state.activePoll);
+  const setPendingPolls = useTmaStore(state => state.setPendingPolls);
 
   useEffect(() => {
     const supabase = createClient();
+    
+    // Fetch initial pending polls
+    const fetchPendingPolls = async () => {
+      const { data: polls } = await supabase
+        .from('tma_evidence_polls')
+        .select('*, evidence:tma_evidences(*)')
+        .eq('status', 'PENDING');
+        
+      if (polls) {
+        setPendingPolls(polls as TMAEvidencePoll[]);
+      }
+    };
+    
+    fetchPendingPolls();
 
-    // Suscribirse a cambios en los polls
+    // Subscribe to changes in polls
     const channel = supabase
       .channel('tma_polls_channel')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'tma_evidence_polls' },
         async (payload) => {
+          console.log('REALTIME POLL EVENT [INSERT]:', payload);
           const newPoll = payload.new as TMAEvidencePoll;
-          // Cargar datos de la evidencia vinculada para mostrar en el overlay
+          if (newPoll.status !== 'PENDING') return;
+
           const { data: evidence } = await supabase
             .from('tma_evidences')
             .select('*')
             .eq('id', newPoll.evidence_id)
             .single();
           
-          setActivePoll({ ...newPoll, evidence });
+          const fullPoll = { ...newPoll, evidence };
+          setPendingPolls(prev => [...prev, fullPoll]);
+          
+          if (!useTmaStore.getState().isNervalisOpen) {
+            useTmaStore.getState().setHasUnreadSignals(true);
+          }
         }
       )
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'tma_evidence_polls' },
         (payload) => {
+          console.log('REALTIME POLL EVENT [UPDATE]:', payload);
           const updatedPoll = payload.new as TMAEvidencePoll;
           
           if (updatedPoll.status !== 'PENDING') {
-            // Si el poll se resolvió, esperamos un poco y lo quitamos
-            setTimeout(() => {
-              setActivePoll(null);
-            }, 3000);
-          } else if (activePoll && activePoll.id === updatedPoll.id) {
-            // Actualizar conteos
-            setActivePoll({ ...activePoll, ...updatedPoll });
+             // Upate counts so the UI knows it resolved
+             setPendingPolls(prev => prev.map(p => p.id === updatedPoll.id ? { ...p, ...updatedPoll } : p));
+             // Remove from pending polls after delay for feedback
+             setTimeout(() => {
+                setPendingPolls(prev => prev.filter(p => p.id !== updatedPoll.id));
+             }, 4000);
+          } else {
+             // Update counts
+             setPendingPolls(prev => prev.map(p => p.id === updatedPoll.id ? { ...p, ...updatedPoll } : p));
           }
         }
       )
@@ -52,7 +75,7 @@ export function PollRealtimeListener() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [activePoll, setActivePoll]);
+  }, [setPendingPolls]);
 
   return null;
 }

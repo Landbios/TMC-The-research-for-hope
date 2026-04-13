@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { TMACharacterData } from '@/features/characters/api';
-import { Monitor, MonitorOff, ShieldAlert } from 'lucide-react';
+import { Cpu, Monitor, MonitorOff, ShieldAlert } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ensureMurderRoom } from '@/features/admin/api';
 import { toast } from 'sonner';
@@ -20,6 +20,7 @@ export function RoomNavigation({ characters = [] }: RoomNavigationProps) {
   const myCharacterId = useTmaStore(state => state.myCharacterId);
   const vnMode = useTmaStore(state => state.vnMode);
   const setVnMode = useTmaStore(state => state.setVnMode);
+  const hasUnreadSignals = useTmaStore(state => state.hasUnreadSignals);
   
   const [text, setText] = useState('');
   const [targetId, setTargetId] = useState<string>('');
@@ -97,6 +98,17 @@ export function RoomNavigation({ characters = [] }: RoomNavigationProps) {
              title={vnMode === 'GROUP' ? "Desactivar Modo VN" : "Activar Modo VN (Charla Grupal)"}
            >
              {vnMode === 'GROUP' ? <Monitor size={18} /> : <MonitorOff size={18} />}
+           </button>
+
+           {/* ACCESO NERVALIS */}
+           <button 
+             onClick={() => useTmaStore.getState().toggleNervalis(true)}
+             className={`relative px-3 flex items-center justify-center border transition-all duration-300 pointer-events-auto ${hasUnreadSignals ? 'border-red-500 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white shadow-[0_0_20px_rgba(239,68,68,0.4)] animate-pulse' : 'border-blue-500 bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white shadow-[0_0_20px_rgba(59,130,246,0.3)]'}`}
+             title="Abrir Terminal Nervalis"
+           >
+             <Cpu size={18} />
+             {hasUnreadSignals && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-ping" />}
+             {hasUnreadSignals && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full" />}
            </button>
 
            {/* Selector de Objetivo (Susurros) */}

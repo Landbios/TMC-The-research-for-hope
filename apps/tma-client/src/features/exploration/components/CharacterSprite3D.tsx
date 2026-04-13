@@ -129,38 +129,6 @@ export function CharacterSprite3D({ id, name, imageUrl, position, onClick, onJoi
                   {publicMessage}
                 </Text>
 
-                {/* Botón UNIRSE A GRUPO */}
-                <group 
-                  position={[0, -1.0, 0.1]}
-                  onPointerOver={(e) => { e.stopPropagation(); setBtnHovered(true); }}
-                  onPointerOut={() => setBtnHovered(false)}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onJoinGroup) onJoinGroup(id);
-                  }}
-                >
-                  <mesh>
-                    <planeGeometry args={[2.5, 0.6]} />
-                    <meshBasicMaterial 
-                      color={btnHovered ? "#3b82f6" : "#1e40af"} 
-                      opacity={0.9} 
-                      transparent 
-                    />
-                  </mesh>
-                  <Text
-                    fontSize={0.2}
-                    color="#ffffff"
-                    anchorX="center"
-                    anchorY="middle"
-                  >
-                    UNIRSE A GRUPO
-                  </Text>
-                  {/* Borde Glow */}
-                  <mesh position={[0, 0, -0.01]}>
-                    <planeGeometry args={[2.6, 0.7]} />
-                    <meshBasicMaterial color="#3b82f6" opacity={0.5} transparent />
-                  </mesh>
-                </group>
               </group>
            )}
         </group>

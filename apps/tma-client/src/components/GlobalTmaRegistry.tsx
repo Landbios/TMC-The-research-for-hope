@@ -4,8 +4,10 @@ import { TmaStoreInitializer } from '@/components/TmaStoreInitializer';
 import { PollRealtimeListener } from '@/features/investigation/components/PollRealtimeListener';
 import { GlobalPollOverlay } from '@/features/dashboard/components/GlobalPollOverlay';
 import { GlobalCharacterListener } from './GlobalCharacterListener';
+import { GlobalNotificationListener } from './GlobalNotificationListener';
 import { StaffIdentitySwitcher } from '@/features/admin/components/StaffIdentitySwitcher';
 import { AssassinRevealOverlay } from '@/features/dashboard/components/AssassinRevealOverlay';
+import { NervalisOverlay } from '@/features/dashboard/components/NervalisOverlay';
 import type { TMACharacterData, TMAGameState } from '@/features/characters/api';
 
 interface GlobalTmaRegistryProps {
@@ -27,9 +29,11 @@ export function GlobalTmaRegistry({ character, gameState, userRole }: GlobalTmaR
         userRole={userRole} 
       />
       <GlobalCharacterListener />
+      <GlobalNotificationListener />
       <PollRealtimeListener />
       <GlobalPollOverlay />
       <AssassinRevealOverlay />
+      <NervalisOverlay />
       {(userRole === 'staff' || userRole === 'superadmin') && <StaffIdentitySwitcher />}
     </>
   );

@@ -1,172 +1,199 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
-import { RoomNode } from './RoomNode';
-import { CameraController } from './CameraController';
+import { useState, useEffect } from 'react';
 import { useTmaStore } from '@/store/useTmaStore';
 import { createClient } from '@/lib/supabase/client';
-
-// Distribución basada en el modelo Blender (Normalizado para comparaciones)
-const MAP_LAYOUTS: Record<string, { position: [number, number, number], size: [number, number, number], color: string }> = {
-  'LOBBY PRINCIPAL': { position: [0, 0, -8], size: [8, 1, 6], color: '#4a7af2' },
-  'HABITACIONES': { position: [0, 0, 0], size: [6, 1, 4], color: '#d9cd5b' },
-  'LAVANDERIA': { position: [0, 0, 6], size: [6, 1, 4], color: '#d66a93' },
-  'BANOS': { position: [0, 0, 12], size: [4, 1, 4], color: '#7bc98f' },
-  'CAFETERIA': { position: [8, 0, 0], size: [6, 1, 8], color: '#bc5b12' },
-  'CAPILLA': { position: [-8, 0, 0], size: [6, 1, 8], color: '#7a3b9a' }
-};
+import type { TMACharacterData } from '@/features/characters/api';
+import { useRouter } from 'next/navigation';
+import { Shield, Skull, Users, MapPin, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 function normalizeName(name: string) {
   return name.toUpperCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // Eliminar acentos
+    .replace(/[\u0300-\u036f]/g, "")
     .trim();
 }
 
-interface RoomMapData {
+interface LiveIntelRoom {
   id: string;
   name: string;
-  position: [number, number, number];
-  size: [number, number, number];
-  color: string;
-  isBlocked: boolean;
+  is_private: boolean;
+  coordination_stage: string;
+  target_murder_room_id: string | null;
+  characters: TMACharacterData[];
+  isBlockedEntry: boolean;
 }
 
 export function AcademyMap() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const controlsRef = useRef<any>(null); 
-  const [rooms, setRooms] = useState<RoomMapData[]>([]);
-  const gamePeriod = useTmaStore((state) => state.gamePeriod);
-  const setSelectedRoomId = useTmaStore((state) => state.setSelectedRoomId);
-  const setVnState = useTmaStore((state) => state.setVnState);
+  const [rooms, setRooms] = useState<LiveIntelRoom[]>([]);
+  const [loading, setLoading] = useState(true);
   
   const userRole = useTmaStore((state) => state.userRole);
+  const myChar = useTmaStore((state) => state.originalCharacter);
+  const toggleNervalis = useTmaStore((state) => state.toggleNervalis);
   
+  const router = useRouter();
+
   useEffect(() => {
     let mounted = true;
-    const fetchRooms = async () => {
+    const fetchLiveIntel = async () => {
       const supabase = createClient();
-      console.log('TMA_MAP: Fetching rooms... UserRole:', userRole);
-      const { data, error } = await supabase.from('tma_rooms').select('*');
       
-      if (error) {
-        console.error('TMA_MAP: Error fetching rooms:', error);
-        return;
-      }
+      const { data: roomsData } = await supabase.from('tma_rooms').select('*');
+      const { data: charsData } = await supabase.from('tma_characters').select('*');
+      
+      if (!roomsData || !charsData) return;
 
-      if (data && mounted) {
-        console.log(`TMA_MAP: Received ${data.length} rooms from DB.`);
+      const performMerge = (dbRooms: any[], dbChars: any[]) => {
+          const isStaff = userRole === 'staff' || userRole === 'superadmin';
+          const isAssassin = myChar?.is_assassin || false;
 
-        // Filtrar salas: La coordinación de asesinato solo la ven Staff o el Asesino asignado
-        const isStaff = userRole === 'staff' || userRole === 'superadmin';
-        const myChar = useTmaStore.getState().originalCharacter;
-        const isAssassin = myChar?.is_assassin || false;
+          const blockedIds = new Set(dbRooms.map(r => r.target_murder_room_id).filter(id => id));
 
-        const filteredData = data.filter(r => {
-          if (r.name === 'COORDINACIÓN DE ASESINATO') {
-            if (isStaff) return true;
-            // Para el asesino: Mostrar solo si NO está terminado
-            return isAssassin && r.coordination_stage !== 'FINISHED';
+          const mergedRooms = dbRooms.filter(r => {
+            if (r.id === '00000000-0000-0000-0000-000000000000') return false; // Hide Global Comm Chat
+            if (r.name === 'COORDINACIÓN DE ASESINATO') {
+              if (isStaff) return true;
+              return isAssassin && r.coordination_stage !== 'FINISHED';
+            }
+            return true;
+          }).map(r => {
+            let displayName = r.name;
+            if (r.name === 'COORDINACIÓN DE ASESINATO' && r.coordination_stage === 'PLANNING' && !isStaff) {
+               displayName = 'INVITACIÓN DE ASESINO';
+            }
+
+            const isTargeted = blockedIds.has(r.id);
+            const charsInRoom = dbChars.filter(c => c.current_room_id === r.id);
+
+            return {
+              id: r.id,
+              name: displayName,
+              is_private: r.is_private,
+              coordination_stage: r.coordination_stage,
+              target_murder_room_id: r.target_murder_room_id,
+              characters: charsInRoom as TMACharacterData[],
+              isBlockedEntry: isTargeted && !isStaff && !isAssassin,
+            };
+          });
+
+          if (mounted) {
+              // Ordénarlos alfabéticamente para mantener consistencia
+              setRooms(mergedRooms.sort((a,b) => a.name.localeCompare(b.name)));
+              setLoading(false);
           }
-          return true;
-        }); 
-        
-        console.log(`TMA_MAP: Rendering ${filteredData.length} rooms.`);
+      };
 
-        const { data: blockedRoomsData } = await supabase.from('tma_rooms').select('target_murder_room_id').not('target_murder_room_id', 'is', null);
-        const blockedIds = new Set(blockedRoomsData?.map(r => r.target_murder_room_id) || []);
+      performMerge(roomsData, charsData);
 
-        const mappedRooms = filteredData.map((r, index) => {
-          let displayName = r.name;
-          if (r.name === 'COORDINACIÓN DE ASESINATO') {
-             if (r.coordination_stage === 'PLANNING' && !isStaff) {
-                displayName = 'INVITACIÓN DE ASESINO';
-             }
-          }
+      // Suscripciones Tiempo Real
+      const channel = supabase.channel('live_intel_global')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tma_characters' }, async () => {
+            // Un update re-evalúa todo
+            const { data: newChars } = await supabase.from('tma_characters').select('*');
+            if (newChars && mounted) performMerge(roomsData, newChars);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tma_rooms' }, async () => {
+            const { data: newRooms } = await supabase.from('tma_rooms').select('*');
+            const { data: currentChars } = await supabase.from('tma_characters').select('*');
+            if (newRooms && currentChars && mounted) performMerge(newRooms, currentChars);
+        })
+        .subscribe();
 
-          const normName = normalizeName(displayName);
-          const layout = MAP_LAYOUTS[normName] || MAP_LAYOUTS[normalizeName(r.name)];
-          
-          // Si no hay layout, los esparcimos en un círculo para que no se solapen en [0,0,10]
-          const fallbackPos: [number, number, number] = layout ? layout.position : [
-            Math.cos(index) * 5, 
-            0, 
-            Math.sin(index) * 5
-          ];
-
-          return {
-            id: r.id, 
-            name: displayName,
-            position: fallbackPos,
-            size: layout?.size || [4, 1, 4],
-            color: layout?.color || '#ffffff',
-            isBlocked: blockedIds.has(r.id)
-          };
-        });
-        setRooms(mappedRooms);
-      }
+      return () => {
+          mounted = false;
+          supabase.removeChannel(channel);
+      };
     };
-    fetchRooms();
-    return () => { mounted = false; };
-  }, [userRole]);
 
-  const isNight = gamePeriod === 'NIGHTTIME';
-  const ambientColor = isNight ? '#ff4040' : '#ffffff';
-  const intensity = isNight ? 0.4 : 1.0;
+    fetchLiveIntel();
+  }, [userRole, myChar?.is_assassin]);
 
-  // Clic en el vacío deselecciona
-  const handlePointerMissed = () => {
-    setSelectedRoomId(null);
-    setVnState({ isActive: false });
+  const handleTransit = (room: LiveIntelRoom) => {
+      // Redirige al cuarto
+      router.push(`/rooms/${room.id}`);
+      // Cierra Nervalis automáticamente para forzar la inmersión del tránsito
+      toggleNervalis(false);
   };
 
   return (
-    <div className="w-full h-screen absolute inset-0 z-0 bg-black">
-      <Canvas shadows camera={{ position: [0, 15, 18], fov: 45 }} onPointerMissed={handlePointerMissed}>
-        <color attach="background" args={[isNight ? '#1a0505' : '#0a0f1a']} />
-        
-        {/* Luces Escénicas */}
-        <ambientLight intensity={intensity} color={ambientColor} />
-        <directionalLight position={[10, 20, 10]} intensity={isNight ? 0.6 : 1.2} color={ambientColor} castShadow />
-        {isNight && <pointLight position={[0, 4, 0]} color="#ff0000" intensity={2.5} distance={15} />}
+    <div className="w-full h-full flex flex-col space-y-4 p-2 bg-black overflow-y-auto custom-scrollbar">
+       <div className="flex items-center justify-between border-b border-blue-500/20 pb-2 shrink-0">
+          <h2 className="font-mono text-xs text-blue-400 uppercase tracking-widest flex items-center gap-2">
+            <MapPin size={14} /> EXPLORACIÓN_GLOBAL
+          </h2>
+          <span className="font-mono text-[8px] text-zinc-500">[{rooms.length}_SECTORES_DETECTADOS]</span>
+       </div>
 
-        <group position={[0, 0, 0]}>
-          {rooms.map((room) => (
-            <RoomNode key={room.id} {...room} />
-          ))}
-        </group>
+       {loading ? (
+         <div className="flex-1 flex flex-col items-center justify-center text-blue-500/50">
+            <Loader2 className="animate-spin mb-4" size={32} />
+            <p className="font-mono text-xs tracking-widest uppercase">Escaneando Biometría...</p>
+         </div>
+       ) : (
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-8">
+            <AnimatePresence>
+              {rooms.map(room => (
+                 <motion.button
+                   layout
+                   initial={{ opacity: 0, scale: 0.95 }}
+                   animate={{ opacity: 1, scale: 1 }}
+                   key={room.id}
+                   onClick={() => handleTransit(room)}
+                   disabled={room.isBlockedEntry}
+                   className={`text-left p-4 border relative overflow-hidden transition-all group flex flex-col gap-2 min-h-24 ${
+                     room.isBlockedEntry 
+                       ? 'bg-zinc-950 border-yellow-500/30 opacity-70 cursor-not-allowed shadow-[inset_0_0_20px_rgba(202,138,4,0.1)]' 
+                       : room.is_private
+                         ? 'bg-red-900/10 border-red-500/50 hover:bg-red-900/20 shadow-[inset_0_0_15px_rgba(239,68,68,0.1)]'
+                         : 'bg-blue-900/10 border-blue-500/30 hover:border-blue-500/80 hover:bg-blue-500/20 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)]'
+                   }`}
+                 >
+                    {/* Efecto hover de escaneo scanline */}
+                    {!room.isBlockedEntry && (
+                       <div className="absolute inset-0 bg-linear-to-b from-transparent via-blue-400/10 to-transparent h-[150%] -top-[150%] group-hover:animate-scan pointer-events-none" />
+                    )}
 
-        <OrbitControls 
-          ref={controlsRef}
-          makeDefault
-          enableDamping
-          dampingFactor={0.05}
-          maxPolarAngle={Math.PI / 2 - 0.1} // No mirar desde abajo
-          minDistance={3}
-          maxDistance={30}
-        />
-        <CameraController controlsRef={controlsRef} roomData={rooms} />
-        
-        <gridHelper args={[50, 50, isNight ? '#550000' : '#003366', isNight ? '#330000' : '#001133']} position={[0, -0.5, 0]} />
-        
-        {/* Ground Plane para recibir luz */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.55, 0]} receiveShadow>
-          <planeGeometry args={[100, 100]} />
-          <meshStandardMaterial color={isNight ? '#050202' : '#02050a'} />
-        </mesh>
-      </Canvas>
+                    <div className="flex justify-between items-start z-10 w-full relative">
+                       <h3 className={`font-mono text-[10px] sm:text-xs font-bold tracking-wider ${
+                         room.isBlockedEntry ? 'text-yellow-500/70' :
+                         room.is_private ? 'text-red-400' : 'text-blue-400'
+                       }`}>
+                         {room.name}
+                       </h3>
+                       <div className="flex gap-2">
+                          {room.isBlockedEntry && <span title="Mantenimiento Táctico"><Skull size={14} className="text-yellow-600 animate-pulse" /></span>}
+                          {!room.isBlockedEntry && room.target_murder_room_id && (
+                             <span title="Preparación Táctica"><Skull size={14} className="text-red-500 animate-ping" /></span>
+                          )}
+                          {room.is_private && <span title="Canal Privado"><Shield size={14} className="text-red-500 animate-pulse" /></span>}
+                       </div>
+                    </div>
 
-      {/* Debug Overlay (Solo para Staff) */}
-      {(userRole === 'staff' || userRole === 'superadmin') && (
-        <div className="absolute bottom-4 left-4 z-50 bg-black/80 p-4 border border-blue-500 font-mono text-[10px] text-blue-400 pointer-events-none">
-          <p className="font-bold border-b border-blue-500/30 mb-2">DEBUG_MAP: {rooms.length} NODES</p>
-          <p>ROLE: {userRole?.toUpperCase()}</p>
-          <p>PERIOD: {gamePeriod}</p>
-          {rooms.length === 0 && <p className="text-red-500 animate-pulse">ALERTA: CERO SALAS DETECTADAS EN DB</p>}
-        </div>
-      )}
+                    <div className="z-10 mt-2 min-h-[40px] w-full">
+                       {room.characters.filter(c => !c.is_hidden).length === 0 ? (
+                          <p className="font-mono text-[9px] text-zinc-600 uppercase">Sin Actividad Registrada</p>
+                       ) : (
+                          <div className="flex flex-col gap-1 w-full">
+                             <div className="flex items-center gap-1 font-mono text-[8px] text-blue-500/60 uppercase mb-1">
+                                <Users size={10} /> Sujetos Detectados: {room.characters.filter(c => !c.is_hidden).length}
+                             </div>
+                             <div className="flex flex-wrap gap-1">
+                                {room.characters.filter(c => !c.is_hidden).map(c => (
+                                   <span key={c.id} className="inline-block px-1.5 py-0.5 border border-blue-500/30 bg-black/60 font-mono text-[8px] text-blue-300 uppercase">
+                                     {c.tma_name}
+                                   </span>
+                                ))}
+                             </div>
+                          </div>
+                       )}
+                    </div>
+                 </motion.button>
+              ))}
+            </AnimatePresence>
+         </div>
+       )}
     </div>
   );
 }

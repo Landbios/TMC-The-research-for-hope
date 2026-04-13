@@ -39,6 +39,18 @@ export async function getRoomClues(roomId: string): Promise<TMAEvidence[]> {
 
 export async function startEvidencePoll(evidenceId: string, initiatorId: string) {
   const supabase = createClient();
+  
+  // Verificar si ya existe un poll pendiente o aceptado para esta evidencia
+  const { data: existingPolls } = await supabase
+    .from('tma_evidence_polls')
+    .select('id, status')
+    .eq('evidence_id', evidenceId)
+    .in('status', ['PENDING', 'ACCEPTED']);
+
+  if (existingPolls && existingPolls.length > 0) {
+    throw new Error('ESTA EVIDENCIA YA ESTÁ SIENDO PROCESADA O YA FUE ACEPTADA EN EL REGISTRO.');
+  }
+
   const { data, error } = await supabase
     .from('tma_evidence_polls')
     .insert({
@@ -57,13 +69,18 @@ export async function submitVote(pollId: string, voterId: string, vote: boolean)
   const supabase = createClient();
   const { error } = await supabase
     .from('tma_evidence_votes')
-    .upsert({
+    .insert({
       poll_id: pollId,
       voter_id: voterId,
       vote: vote
     });
   
-  if (error) throw error;
+  if (error) {
+    if (error.code === '23505') {
+       throw new Error('Ya has votado en este protocolo.');
+    }
+    throw error;
+  }
 }
 
 export async function resolvePoll(pollId: string, status: 'ACCEPTED' | 'REJECTED', initiatorId: string, evidenceId: string) {

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { rollD20, checkSuccess } from '@/features/shared/utils/dice_utils';
 import { ShieldAlert, Fingerprint, DoorOpen } from 'lucide-react';
+import { DiceAnimation } from '@/features/shared/components/DiceAnimation';
 
 interface StealthEntryDialogProps {
   roomName: string;
@@ -95,9 +96,9 @@ export function StealthEntryDialog({ roomName, onDecide, onCancel }: StealthEntr
             <div className="flex flex-col items-center justify-center py-8 gap-6 animate-in fade-in zoom-in">
               {isRolling ? (
                 <>
-                  <div className="w-16 h-16 border-4 border-amber-600/30 border-t-amber-500 rounded-full animate-spin"></div>
-                  <p className="font-mono text-sm text-amber-500 animate-pulse uppercase tracking-[0.3em]">
-                    CALCULANDO VECTOR...
+                  <DiceAnimation />
+                  <p className="font-mono text-xs text-amber-500 animate-pulse uppercase tracking-[0.3em] mt-4">
+                    CALCULANDO VECTOR DE ENTRADA...
                   </p>
                 </>
               ) : (

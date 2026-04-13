@@ -1,11 +1,12 @@
 'use client';
 
 import { Suspense, useState, useEffect } from 'react';
+import Image from 'next/image';
 import { Canvas, ThreeEvent } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
 import { RoomCube } from '@/features/exploration/components/RoomCube';
 import { getAllRooms, getRoomEvidences, createTmaEvidence, deleteTmaEvidence } from '../api';
-import { MapPin, Plus, Save, X, Edit2, Trash2, Camera, Database, Box } from 'lucide-react';
+import { Plus, Save, X, Edit2, Trash2, Camera, Database, Box } from 'lucide-react';
 import ImageUploader from '@/features/shared/components/ImageUploader';
 import { EvidenceSprite3D } from '@/features/exploration/components/EvidenceSprite3D';
 import { AdminEvidenceModal } from './AdminEvidenceModal';
@@ -226,7 +227,7 @@ export function AdminRoomEditor() {
 
       {/* 🔵 LISTADO DE EVIDENCIAS (BOTTOM BOX) */}
       <div className="border border-white/5 bg-zinc-950 flex flex-col min-h-[250px]">
-         <div className="p-3 px-6 bg-red-500/[0.03] border-b border-red-900/20 flex items-center justify-between">
+         <div className="p-3 px-6 bg-red-500/5 border-b border-red-900/20 flex items-center justify-between">
             <h3 className="text-[10px] font-bold text-red-500 uppercase flex items-center gap-2 tracking-widest">
                <Box size={10} /> Inventario de Anomalías en Sala
             </h3>
@@ -246,9 +247,15 @@ export function AdminRoomEditor() {
                      className="bg-black/40 border border-white/5 p-3 hover:border-red-500/40 transition-all group flex flex-col gap-3"
                   >
                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-zinc-900 border border-white/10 relative">
+                        <div className="w-10 h-10 bg-zinc-900 border border-white/10 relative overflow-hidden">
                            {ev.image_url ? (
-                              <img src={ev.image_url} alt="" className="w-full h-full object-cover grayscale group-hover:grayscale-0" />
+                              <Image 
+                                src={ev.image_url} 
+                                alt={ev.title} 
+                                fill 
+                                className="object-cover grayscale group-hover:grayscale-0" 
+                                unoptimized
+                              />
                            ) : (
                               <div className="w-full h-full flex items-center justify-center opacity-10">
                                  <Plus size={14} />

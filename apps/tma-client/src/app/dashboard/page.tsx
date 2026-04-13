@@ -26,7 +26,6 @@ export default async function DashboardPage() {
         gameState={gameState} 
         userRole={profile?.role as 'roleplayer' | 'staff' | 'superadmin'} 
       />
-      <NervalisOverlay />
 
       {/* Pantalla CRT global */}
       <div className="fixed inset-0 crt-scanline pointer-events-none" />
