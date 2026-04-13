@@ -13,10 +13,10 @@ import { VNChatOverlay } from '@/features/vn-ui/components/VNChatOverlay';
 import { RoomCube } from './RoomCube';
 import { EvidenceSprite3D } from './EvidenceSprite3D';
 import { getRoomClues, TMAEvidence } from '@/features/investigation/api';
-import { PrivacyPollModal } from './PrivacyPollModal';
 import { StealthEntryDialog } from './StealthEntryDialog';
 import { startPrivacyPoll, updateRoomPrivacy } from '../privacy_api';
-import { Zap, Shield, ShieldOff, ShieldAlert, ShoppingBag } from 'lucide-react';
+import { PrivacyPollModal } from './PrivacyPollModal';
+import { Zap, Shield, ShieldOff, ShieldAlert, ShoppingBag, Fingerprint, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { AssassinInvitePanel } from './AssassinInvitePanel';
 import { AssassinShopOverlay } from '@/features/dashboard/components/AssassinShopOverlay';
@@ -34,6 +34,7 @@ function getPositionForIndex(index: number): [number, number, number] {
 }
 
 export function InsideRoomArena() {
+  const isHidden = useTmaStore(state => state.isHidden);
   const params = useParams();
   const roomId = params?.roomId as string;
   const [characters, setCharacters] = useState<TMACharacterData[]>([]);
@@ -150,6 +151,10 @@ export function InsideRoomArena() {
   // 3. Efecto de Suscripciones en Tiempo Real (Estable)
   useEffect(() => {
     if (!roomId || roomId === 'UNKNOWN_SECTOR') return;
+    
+    // Sincronizar ID de sala para componentes globales (Nervalis Chat, etc)
+    setSelectedRoomId(roomId);
+
     let mounted = true;
     const supabase = createClient();
     let currentCharacterId: string | null = null;
@@ -204,6 +209,9 @@ export function InsideRoomArena() {
            const poll = payload.new as import('@/store/useTmaStore').TMARoomPrivacyPoll;
            if (poll.status === 'PENDING' && mounted) {
               setActivePrivacyPoll(poll);
+              if (!useTmaStore.getState().isNervalisOpen && poll.initiator_id !== currentCharacterId) {
+                  useTmaStore.getState().setHasUnreadSignals(true);
+              }
            }
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tma_room_privacy_polls', filter: `room_id=eq.${roomId}` }, (payload) => {
@@ -239,7 +247,40 @@ export function InsideRoomArena() {
             });
          }
       };
+      
+      const fetchRoomHistory = async () => {
+         const { data } = await supabase.from('tma_messages').select(`
+            id, sender_tma_id, target_tma_id, content, is_whisper, is_system_message,
+            sender:tma_characters (tma_name, image_url, sprite_idle_url)
+         `).eq('tma_room_id', roomId).order('created_at', { ascending: true }).limit(50);
+         
+         if (data && mounted) {
+            const formattedMessages = data.reduce((acc: import('@/features/vn-ui/components/VNChatOverlay').VNChatMessage[], msg: any) => {
+               // Filtrar Whispers irrelevantes
+               if (msg.is_whisper && msg.sender_tma_id !== currentCharacterId && msg.target_tma_id !== currentCharacterId) {
+                  return acc;
+               }
+               
+               const senderObj = Array.isArray(msg.sender) ? msg.sender[0] : msg.sender;
+               
+               acc.push({
+                  id: msg.id,
+                  sender_tma_id: msg.sender_tma_id,
+                  sender_name: senderObj?.tma_name || 'Desconocido',
+                  target_tma_id: msg.target_tma_id,
+                  content: msg.content,
+                  is_whisper: msg.is_whisper,
+                  is_system_message: msg.is_system_message,
+                  sprite_url: senderObj?.sprite_idle_url || senderObj?.image_url
+               });
+               return acc;
+            }, [] as import('@/features/vn-ui/components/VNChatOverlay').VNChatMessage[]);
+            useTmaStore.getState().setVnGroupMessages(formattedMessages);
+         }
+      };
+
       fetchRoomMeta();
+      fetchRoomHistory();
 
       // 4. Suscripción a Mensajes (Burbujas Flotantes y VN-UI)
       supabase.channel(`chat_messages_${roomId}_${Date.now()}`)
@@ -254,8 +295,13 @@ export function InsideRoomArena() {
            } | undefined;
            if (!msg) return; 
 
-           const isForMeOrByMe = msg.sender_tma_id === currentCharacterId || msg.target_tma_id === currentCharacterId || !msg.target_tma_id;
+           const isMe = msg.sender_tma_id === currentCharacterId;
+           const isForMeOrByMe = isMe || msg.target_tma_id === currentCharacterId || !msg.target_tma_id;
            
+           if (!isMe && isForMeOrByMe && !useTmaStore.getState().isNervalisOpen) {
+               useTmaStore.getState().setHasUnreadSignals(true);
+           }
+
            if (msg.is_whisper && isForMeOrByMe) {
               let senderName = 'Sistema';
               let spriteUrl: string | undefined = undefined;
@@ -346,13 +392,10 @@ export function InsideRoomArena() {
     return () => {
       mounted = false;
       clearInterval(autoCloseInterval);
-      if (myCharacterId) {
-         // Solo reseteamos la sala si estamos UNMOUNTING de la vista de sala por completo
-         supabase.from('tma_characters').update({ current_room_id: null, is_hidden: false }).eq('id', myCharacterId).then();
-      }
+      setSelectedRoomId(null);
       supabase.removeAllChannels();
     };
-  }, [roomId, myCharacterId, setActivePrivacyPoll]);
+  }, [roomId, myCharacterId, setActivePrivacyPoll, setSelectedRoomId]);
 
   const handleCharacterClick = (id: string, name: string) => {
     setVnState({
@@ -360,10 +403,6 @@ export function InsideRoomArena() {
       speaker: name,
       text: `Entrando en chat privado con ${name}... ¿Qué pistas secretas tienes?`
     });
-  };
-
-  const handleJoinGroup = () => {
-    setVnMode('GROUP');
   };
 
   const handleClueDiscovery = (clue: TMAEvidence) => {
@@ -388,8 +427,11 @@ export function InsideRoomArena() {
      
      if (action === 'STEALTH') {
         await supabase.from('tma_characters').update({ current_room_id: roomId, is_hidden: true }).eq('id', myCharacterId);
+        // Optimistic update for local UI
+        useTmaStore.getState().setCharacterData({ id: myCharacterId, is_hidden: true } as Partial<TMACharacterData> as TMACharacterData); 
      } else {
         await supabase.from('tma_characters').update({ current_room_id: roomId, is_hidden: false }).eq('id', myCharacterId);
+        useTmaStore.getState().setCharacterData({ id: myCharacterId, is_hidden: false } as Partial<TMACharacterData> as TMACharacterData);
         await supabase.from('tma_messages').insert({
            tma_room_id: roomId,
            sender_tma_id: myCharacterId,
@@ -436,7 +478,6 @@ export function InsideRoomArena() {
                     position={getPositionForIndex(index)}
                     publicMessage={char.publicMessage} 
                     onClick={handleCharacterClick}
-                    onJoinGroup={handleJoinGroup}
                   />
                 </Suspense>
               );
@@ -508,7 +549,7 @@ export function InsideRoomArena() {
       )}
 
       {/* Poll de Privacidad */}
-      {activePrivacyPoll && !vnState.isActive && <PrivacyPollModal />}
+      <PrivacyPollModal />
 
       {/* Dialogo de Sigilo */}
       {showStealthEntry && !vnState.isActive && (
@@ -589,6 +630,15 @@ export function InsideRoomArena() {
               </button>
            )}
 
+           {characters.length > 0 && (
+              <button 
+                onClick={() => setVnMode('GROUP')}
+                className="pointer-events-auto p-3 border border-emerald-500/50 bg-black/80 text-emerald-500 hover:bg-emerald-500 hover:text-black transition-all flex items-center gap-2 font-mono text-[10px] uppercase shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+              >
+                <MessageSquare size={14} /> Abrir Chat de Sala
+              </button>
+           )}
+
            {isPrivate && (
               <button 
                  onClick={() => handleTogglePrivacy(false)}
@@ -642,6 +692,20 @@ export function InsideRoomArena() {
              window.location.reload();
            }}
          />
+      )}
+
+      {/* Visual Stealth Filter Overlay */}
+      {isHidden && (
+         <div className="fixed inset-0 pointer-events-none z-45 overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(circle,transparent_40%,rgba(0,0,0,0.8)_100%)] animate-pulse opacity-80" />
+            <div className="absolute inset-0 crt-scanline opacity-10" />
+            <div className="absolute top-20 left-1/2 -translate-x-1/2 flex items-center gap-3 px-4 py-1.5 bg-amber-600/10 border border-amber-500/30 backdrop-blur-sm rounded-full">
+               <Fingerprint className="text-amber-500 animate-pulse" size={14} />
+               <span className="font-mono text-[9px] text-amber-500 uppercase tracking-[0.3em] font-bold">
+                  MODO SIGILO ACTIVO : NO DETECTABLE
+               </span>
+            </div>
+         </div>
       )}
     </>
   );

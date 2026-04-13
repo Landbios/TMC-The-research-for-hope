@@ -71,7 +71,8 @@ export function AdminDashboard({ userRole }: AdminDashboardProps) {
         .maybeSingle();
 
       if (coordRoom) {
-        const targetObj = coordRoom.tma_rooms_target as any;
+        interface JoinedRoomMeta { name: string }
+        const targetObj = coordRoom.tma_rooms_target as unknown as JoinedRoomMeta | JoinedRoomMeta[] | null;
         const targetName = Array.isArray(targetObj) ? targetObj[0]?.name : targetObj?.name;
         
         setCurrentCase({
@@ -335,7 +336,7 @@ export function AdminDashboard({ userRole }: AdminDashboardProps) {
                            <button 
                              onClick={handleResolveCase}
                              disabled={isLoading}
-                             className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-mono text-xs font-bold uppercase tracking-[0.3em] shadow-[0_0_30px_rgba(220,38,38,0.3)] transition-all font-bold"
+                             className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-mono text-xs font-bold uppercase tracking-[0.3em] shadow-[0_0_30px_rgba(220,38,38,0.3)] transition-all"
                            >
                               CASO RESUELTO (RESET TOTAL)
                            </button>

@@ -64,7 +64,8 @@ export function VNChatOverlay({ messages, onClose, clueData }: VNChatOverlayProp
         onClose();
      } catch (err) {
         console.error("Error starting evidence poll:", err);
-        toast.error('ERROR EN EL PROTOCOLO');
+        const msg = err instanceof Error ? err.message : 'ERROR EN EL PROTOCOLO';
+        toast.error(msg);
      } finally {
         setIsStartingPoll(false);
      }
@@ -88,19 +89,19 @@ export function VNChatOverlay({ messages, onClose, clueData }: VNChatOverlayProp
       <div className="absolute top-4 left-4 w-12 h-12 border-t-2 border-l-2 border-(--glow)/40 after:absolute after:top-[-2px] after:left-[-2px] after:w-2 after:h-2 after:bg-(--glow) z-10 pointer-events-none"></div>
       <div className="absolute top-4 right-4 w-12 h-12 border-t-2 border-r-2 border-(--glow)/40 after:absolute after:top-[-2px] after:right-[-2px] after:w-2 after:h-2 after:bg-(--glow) z-10 pointer-events-none"></div>
 
-      <div className="relative w-full flex flex-col justify-end mt-auto pointer-events-none h-full">
+      <div className="relative w-full flex flex-col justify-end mt-auto pointer-events-none h-full overflow-hidden">
         {/* Sprites / Clue Area */}
-        <div className="absolute bottom-0 w-full h-[600px] pointer-events-none flex items-end justify-center z-20 px-[10%] mb-32 md:mb-40">
+        <div className="absolute bottom-0 w-full h-[400px] md:h-[600px] pointer-events-none flex items-end justify-center z-20 px-[5%] md:px-[10%] mb-16 md:mb-40">
           
           {/* CLUE MODE: Large Central Evidence Image */}
           {isClueMode && (
-             <div className="absolute bottom-20 w-[500px] h-[500px] transition-all duration-700 animate-in zoom-in-95 fade-in">
-                <div className="relative w-full h-full p-8 bg-zinc-950/40 border border-red-500/30 backdrop-blur-sm">
+             <div className="absolute bottom-20 w-[300px] md:w-[500px] h-[300px] md:h-[500px] transition-all duration-700 animate-in zoom-in-95 fade-in">
+                <div className="relative w-full h-full p-4 md:p-8 bg-zinc-950/40 border border-red-500/30 backdrop-blur-sm">
                    <Image 
                      src={clueData.image_url || 'https://picsum.photos/seed/clue/600/600'} 
                      alt={clueData.title}
                      fill
-                     className="object-contain p-4 drop-shadow-[0_0_40px_rgba(239,68,68,0.3)]"
+                     className="object-contain p-2 md:p-4 drop-shadow-[0_0_40px_rgba(239,68,68,0.3)]"
                    />
                    {/* Scanline overlay for clue */}
                    <div className="absolute inset-0 bg-linear-to-b from-transparent via-red-500/5 to-transparent h-1 w-full animate-scanline opacity-20 pointer-events-none"></div>
@@ -115,15 +116,15 @@ export function VNChatOverlay({ messages, onClose, clueData }: VNChatOverlayProp
           {/* CHAT MODE: Multi-sprite layout */}
           {!isClueMode && isMessageMode && (
              <>
-                {/* Previous Speaker Sprite - Dimmed and Left */}
-                {prevMsg && prevMsg.sprite_url && (
-                  <div 
-                    className="absolute bottom-0 left-[12%] w-[400px] h-[550px] transition-all duration-700 ease-in-out brightness-[0.35] contrast-[1.1] z-10"
-                    style={{ 
-                      transform: `scale(${prevMsg.scale ?? 0.9}) translateY(${(prevMsg.position_y ?? 0) * -1}px) translateX(-20px)`, 
-                      transformOrigin: 'bottom center' 
-                    }}
-                  >
+                 {/* Previous Speaker Sprite - Dimmed and Left */}
+                 {prevMsg && prevMsg.sprite_url && (
+                   <div 
+                     className="absolute bottom-0 left-[2%] md:left-[12%] w-[250px] md:w-[400px] h-[400px] md:h-[550px] transition-all duration-700 ease-in-out brightness-[0.35] contrast-[1.1] z-10"
+                     style={{ 
+                       transform: `scale(${prevMsg.scale ?? 0.9}) translateY(${(prevMsg.position_y ?? 0) * -1}px) translateX(-20px)`, 
+                       transformOrigin: 'bottom center' 
+                     }}
+                   >
                     <Image 
                       src={prevMsg.sprite_url} 
                       alt="Previous Speaker" 
@@ -133,15 +134,15 @@ export function VNChatOverlay({ messages, onClose, clueData }: VNChatOverlayProp
                   </div>
                 )}
 
-                {/* Current Speaker Sprite - Bright and Right/Center */}
-                {lastMsg && lastMsg.sprite_url && (
-                  <div 
-                    className="absolute bottom-0 right-[12%] w-[450px] h-[600px] pointer-events-auto transition-all duration-500 z-20 animate-in fade-in slide-in-from-bottom-5"
-                    style={{ 
-                      transform: `scale(${lastMsg.scale ?? 1.0}) translateY(${(lastMsg.position_y ?? 0) * -1}px)`, 
-                      transformOrigin: 'bottom center' 
-                    }}
-                  >
+                 {/* Current Speaker Sprite - Bright and Right/Center */}
+                 {lastMsg && lastMsg.sprite_url && (
+                   <div 
+                     className="absolute bottom-0 right-[2%] md:right-[12%] w-[300px] md:w-[450px] h-[450px] md:h-[600px] pointer-events-auto transition-all duration-500 z-20 animate-in fade-in slide-in-from-bottom-5"
+                     style={{ 
+                       transform: `scale(${lastMsg.scale ?? 1.0}) translateY(${(lastMsg.position_y ?? 0) * -1}px)`, 
+                       transformOrigin: 'bottom center' 
+                     }}
+                   >
                     <Image 
                       src={lastMsg.sprite_url} 
                       alt={speakerName} 
@@ -176,7 +177,7 @@ export function VNChatOverlay({ messages, onClose, clueData }: VNChatOverlayProp
         </div>
 
         {/* Text Box - Full Width, elevated slightly above RoomNavigation */}
-        <div className="w-full bg-[#0a0a0a]/95 backdrop-blur-3xl p-8 pb-12 shadow-[0_-10px_60px_rgba(0,0,0,0.8)] relative overflow-hidden pointer-events-auto z-30 min-h-[180px] transition-all duration-500 border-t border-(--glow)/30 mb-20 md:mb-24">
+        <div className="w-full bg-[#0a0a0a]/95 backdrop-blur-3xl p-5 md:p-8 pb-8 md:pb-12 shadow-[0_-10px_60px_rgba(0,0,0,0.8)] relative overflow-hidden pointer-events-auto z-30 min-h-[140px] md:min-h-[180px] transition-all duration-500 border-t border-(--glow)/30 mb-8 md:mb-24">
          
          {/* Top Scanline effect */}
          <div className="absolute top-0 left-0 w-full h-px shadow-[0_0_10px_var(--glow)] bg-(--glow)/50"></div>
@@ -188,7 +189,7 @@ export function VNChatOverlay({ messages, onClose, clueData }: VNChatOverlayProp
            {/* Speaker Name Label - Cinematic Style */}
            {!isSystem && (
              <div className="inline-block self-start mb-1">
-               <h3 className="text-(--glow) font-serif italic text-2xl md:text-3xl font-extrabold tracking-[0.08em] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] border-b-2 border-(--glow)/30 pb-1">
+               <h3 className="text-(--glow) font-serif italic text-xl md:text-3xl font-extrabold tracking-[0.08em] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] border-b-2 border-(--glow)/30 pb-1">
                  {speakerName}
                </h3>
              </div>
@@ -203,14 +204,14 @@ export function VNChatOverlay({ messages, onClose, clueData }: VNChatOverlayProp
            )}
            
            {/* Message Content */}
-           <div className="relative group min-h-20 flex justify-between items-start">
-             <div className="max-w-[70%]">
-                <p className="text-white text-lg md:text-xl leading-relaxed font-sans font-medium drop-shadow-[1px_1px_2px_rgba(0,0,0,0.5)]">
+           <div className="relative group min-h-20 flex justify-between items-start gap-4">
+             <div className="max-w-full md:max-w-[70%]">
+                <p className="text-white text-base md:text-xl leading-relaxed font-sans font-medium drop-shadow-[1px_1px_2px_rgba(0,0,0,0.5)]">
                    {isClueMode 
                      ? clueData.description_brief 
                      : (isMessageMode 
                          ? (isSystem ? lastMsg?.content : `"${lastMsg?.content}"`)
-                         : "Protocolo de Charla Grupal Iniciado. Esperando transmisiones de otros estudiantes en esta zona..."
+                         : "Transmisión en espera..."
                        )
                    }
                 </p>

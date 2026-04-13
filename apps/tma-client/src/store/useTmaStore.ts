@@ -36,6 +36,7 @@ interface TmaStoreState {
   originalCharacter: TMACharacterData | null;
   userRole: 'roleplayer' | 'staff' | 'superadmin';
   isStoreInitialized: boolean;
+  isHidden: boolean;
   
   // Exploration & VN
   selectedRoomId: string | null;
@@ -46,9 +47,11 @@ interface TmaStoreState {
   activeClue: import('@/features/investigation/api').TMAEvidence | null;
   lastVnActivity: number;
   isNervalisOpen: boolean;
+  hasUnreadSignals: boolean;
+  terminalPosition: { x: number; y: number };
 
   // Investigation & Privacy Polls
-  activePoll: TMAEvidencePoll | null;
+  pendingPolls: TMAEvidencePoll[];
   activePrivacyPoll: TMARoomPrivacyPoll | null;
 
   // Actions
@@ -61,12 +64,15 @@ interface TmaStoreState {
   setVnMode: (mode: 'WHISPER' | 'GROUP' | 'CLUE') => void;
   addVnWhisper: (msg: import('@/features/vn-ui/components/VNChatOverlay').VNChatMessage) => void;
   addVnGroupMessage: (msg: import('@/features/vn-ui/components/VNChatOverlay').VNChatMessage) => void;
+  setVnGroupMessages: (messages: import('@/features/vn-ui/components/VNChatOverlay').VNChatMessage[]) => void;
   setActiveClue: (clue: import('@/features/investigation/api').TMAEvidence | null) => void;
   clearVnWhispers: () => void;
   clearVnGroupMessages: () => void;
   toggleNervalis: (open?: boolean) => void;
+  setHasUnreadSignals: (val: boolean) => void;
+  setTerminalPosition: (pos: { x: number; y: number }) => void;
   setUserRole: (role: 'roleplayer' | 'staff' | 'superadmin') => void;
-  setActivePoll: (poll: TMAEvidencePoll | null) => void;
+  setPendingPolls: (polls: TMAEvidencePoll[] | ((prev: TMAEvidencePoll[]) => TMAEvidencePoll[])) => void;
   setActivePrivacyPoll: (poll: TMARoomPrivacyPoll | null) => void;
   setMyCharacterId: (id: string | null) => void;
   setStoreInitialized: (initialized: boolean) => void;
@@ -86,6 +92,7 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
   originalCharacter: null,
   userRole: 'roleplayer',
   isStoreInitialized: false,
+  isHidden: false,
   
   selectedRoomId: null,
   vnState: { isActive: false, speaker: null, text: null },
@@ -95,7 +102,9 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
   activeClue: null,
   lastVnActivity: Date.now(),
   isNervalisOpen: false,
-  activePoll: null,
+  hasUnreadSignals: false,
+  terminalPosition: { x: 0, y: 0 },
+  pendingPolls: [],
   activePrivacyPoll: null,
 
   setGameState: (state) => set({
@@ -114,6 +123,7 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
       characterStatus: char.status ?? 'ALIVE',
       isAssassin: char.is_assassin ?? false,
       myCharacterId: char.id,
+      isHidden: char.is_hidden ?? false,
       // Solo guardamos como original si es un PC (Jugador)
       originalCharacter: !isActuallyNpc ? char : state.originalCharacter,
     };
@@ -166,6 +176,10 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
     activeGroupMessages: [...state.activeGroupMessages, msg],
     lastVnActivity: Date.now()
   })),
+  setVnGroupMessages: (messages) => set({ 
+    activeGroupMessages: messages,
+    lastVnActivity: Date.now()
+  }),
   setActiveClue: (clue) => set({ 
     activeClue: clue,
     vnMode: clue ? 'CLUE' : 'WHISPER', // Default to WHISPER if clue is cleared
@@ -173,9 +187,20 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
   }),
   clearVnWhispers: () => set({ vnWhispers: [] }),
   clearVnGroupMessages: () => set({ activeGroupMessages: [] }),
-  toggleNervalis: (open) => set((state) => ({ isNervalisOpen: open ?? !state.isNervalisOpen })),
+  toggleNervalis: (open) => set((state) => {
+    const newState = open ?? !state.isNervalisOpen;
+    return { 
+      isNervalisOpen: newState,
+      // Auto-clear unread signals when opening Nervalis
+      hasUnreadSignals: newState ? false : state.hasUnreadSignals
+    };
+  }),
+  setHasUnreadSignals: (val) => set({ hasUnreadSignals: val }),
+  setTerminalPosition: (pos) => set({ terminalPosition: pos }),
   setUserRole: (role) => set({ userRole: role }),
-  setActivePoll: (poll) => set({ activePoll: poll }),
+  setPendingPolls: (updater) => set((state) => ({ 
+    pendingPolls: typeof updater === 'function' ? updater(state.pendingPolls) : updater 
+  })),
   setActivePrivacyPoll: (poll) => set({ activePrivacyPoll: poll }),
   setMyCharacterId: (id) => set({ myCharacterId: id }),
   setStoreInitialized: (initialized) => set({ isStoreInitialized: initialized }),
