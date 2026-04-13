@@ -88,7 +88,6 @@ export function InsideRoomArena() {
     if (!roomId || roomId === 'UNKNOWN_SECTOR' || !myCharacterId) return;
     
     const checkRoomEntry = async () => {
-        const channelsToClean: any[] = [];
     const supabase = createClient();
         const isStaff = userRole === 'staff' || userRole === 'superadmin';
 
@@ -220,8 +219,9 @@ export function InsideRoomArena() {
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tma_room_privacy_polls', filter: `room_id=eq.${roomId}` }, (payload) => {
            const poll = payload.new as import('@/store/useTmaStore').TMARoomPrivacyPoll;
            if (mounted) setActivePrivacyPoll(poll);
-        })
-        .subscribe();
+        });
+      chan2.subscribe();
+      channelsToClean.push(chan2);
 
        // 3. Suscripción a la propia Sala (Estado de Privacidad y Fases de Coordinación)
       const chan3 = supabase.channel(`room_meta_${roomId}_${Date.now()}`)
@@ -238,8 +238,9 @@ export function InsideRoomArena() {
                  target_murder_room_id: room.target_murder_room_id
               });
            }
-        })
-        .subscribe();
+         });
+      chan3.subscribe();
+      channelsToClean.push(chan3);
       
       const fetchRoomMeta = async () => {
          const { data } = await supabase.from('tma_rooms').select('coordination_stage, target_murder_room_id').eq('id', roomId).single();
@@ -258,7 +259,7 @@ export function InsideRoomArena() {
          `).eq('tma_room_id', roomId).order('created_at', { ascending: true }).limit(50);
          
          if (data && mounted) {
-            const formattedMessages = data.reduce((acc: import('@/features/vn-ui/components/VNChatOverlay').VNChatMessage[], msg: any) => {
+            const formattedMessages = data.reduce((acc: import('@/features/vn-ui/components/VNChatOverlay').VNChatMessage[], msg: { id: string, sender_tma_id: string, target_tma_id?: string, content: string, is_whisper: boolean, is_system_message: boolean, sender: unknown }) => {
                // Filtrar Whispers irrelevantes
                if (msg.is_whisper && msg.sender_tma_id !== currentCharacterId && msg.target_tma_id !== currentCharacterId) {
                   return acc;
