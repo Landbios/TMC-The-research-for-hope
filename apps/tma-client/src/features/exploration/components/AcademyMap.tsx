@@ -8,6 +8,8 @@ import { useRouter } from 'next/navigation';
 import { Shield, Skull, Users, MapPin, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const PLACEHOLDER_IMG_1 = 'https://picsum.photos/seed/tma/200/200';
+
 function normalizeName(name: string) {
   return name.toUpperCase()
     .normalize("NFD")
@@ -32,6 +34,7 @@ export function AcademyMap() {
   const userRole = useTmaStore((state) => state.userRole);
   const myChar = useTmaStore((state) => state.originalCharacter);
   const toggleNervalis = useTmaStore((state) => state.toggleNervalis);
+  const currentRoomId = useTmaStore((state) => state.selectedRoomId);
   
   const router = useRouter();
 
@@ -53,6 +56,12 @@ export function AcademyMap() {
 
           const mergedRooms = dbRooms.filter(r => {
             if (r.id === '00000000-0000-0000-0000-000000000000') return false; // Hide Global Comm Chat
+            
+            const isStaff = userRole === 'staff' || userRole === 'superadmin';
+            // Regla: Salas ocultas no se muestran a estudiantes
+            if (r.is_hidden && !isStaff) return false;
+            if (r.name.includes('ADMIN') && !isStaff) return false;
+
             if (r.name === 'COORDINACIÓN DE ASESINATO') {
               if (isStaff) return true;
               return isAssassin && r.coordination_stage !== 'FINISHED';
@@ -134,63 +143,97 @@ export function AcademyMap() {
        ) : (
          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-8">
             <AnimatePresence>
-              {rooms.map(room => (
-                 <motion.button
-                   layout
-                   initial={{ opacity: 0, scale: 0.95 }}
-                   animate={{ opacity: 1, scale: 1 }}
-                   key={room.id}
-                   onClick={() => handleTransit(room)}
-                   disabled={room.isBlockedEntry}
-                   className={`text-left p-4 border relative overflow-hidden transition-all group flex flex-col gap-2 min-h-24 ${
-                     room.isBlockedEntry 
-                       ? 'bg-zinc-950 border-yellow-500/30 opacity-70 cursor-not-allowed shadow-[inset_0_0_20px_rgba(202,138,4,0.1)]' 
-                       : room.is_private
-                         ? 'bg-red-900/10 border-red-500/50 hover:bg-red-900/20 shadow-[inset_0_0_15px_rgba(239,68,68,0.1)]'
-                         : 'bg-blue-900/10 border-blue-500/30 hover:border-blue-500/80 hover:bg-blue-500/20 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)]'
-                   }`}
-                 >
-                    {/* Efecto hover de escaneo scanline */}
-                    {!room.isBlockedEntry && (
-                       <div className="absolute inset-0 bg-linear-to-b from-transparent via-blue-400/10 to-transparent h-[150%] -top-[150%] group-hover:animate-scan pointer-events-none" />
-                    )}
+              {rooms.map(room => {
+                 const isCurrent = room.id === currentRoomId;
+                 return (
+                   <motion.button
+                     layout
+                     initial={{ opacity: 0, scale: 0.95 }}
+                     animate={{ opacity: 1, scale: 1 }}
+                     key={room.id}
+                     onClick={() => handleTransit(room)}
+                     disabled={room.isBlockedEntry}
+                     className={`text-left p-4 border relative overflow-hidden transition-all group flex flex-col gap-2 min-h-[110px] ${
+                       room.isBlockedEntry 
+                         ? 'bg-zinc-950 border-yellow-500/30 opacity-70 cursor-not-allowed shadow-[inset_0_0_20px_rgba(202,138,4,0.1)]' 
+                         : isCurrent
+                           ? 'bg-blue-600/10 border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.2)]'
+                           : room.is_private
+                             ? 'bg-red-900/10 border-red-500/50 hover:bg-red-900/20 shadow-[inset_0_0_15px_rgba(239,68,68,0.1)]'
+                             : 'bg-blue-900/10 border-blue-500/30 hover:border-blue-500/80 hover:bg-blue-500/20 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)]'
+                     }`}
+                   >
+                      {/* Efecto hover de escaneo scanline */}
+                      {!room.isBlockedEntry && (
+                         <div className="absolute inset-0 bg-linear-to-b from-transparent via-blue-400/10 to-transparent h-[150%] -top-[150%] group-hover:animate-scan pointer-events-none" />
+                      )}
 
-                    <div className="flex justify-between items-start z-10 w-full relative">
-                       <h3 className={`font-mono text-[10px] sm:text-xs font-bold tracking-wider ${
-                         room.isBlockedEntry ? 'text-yellow-500/70' :
-                         room.is_private ? 'text-red-400' : 'text-blue-400'
-                       }`}>
-                         {room.name}
-                       </h3>
-                       <div className="flex gap-2">
-                          {room.isBlockedEntry && <span title="Mantenimiento Táctico"><Skull size={14} className="text-yellow-600 animate-pulse" /></span>}
-                          {!room.isBlockedEntry && room.target_murder_room_id && (
-                             <span title="Preparación Táctica"><Skull size={14} className="text-red-500 animate-ping" /></span>
-                          )}
-                          {room.is_private && <span title="Canal Privado"><Shield size={14} className="text-red-500 animate-pulse" /></span>}
-                       </div>
-                    </div>
+                      {/* Glitch Overlay for Maintenance */}
+                      {room.isBlockedEntry && (
+                         <div className="absolute inset-0 pointer-events-none bg-amber-500/5 group-hover:animate-pulse opacity-20">
+                            <div className="absolute inset-0 crt-scanline opacity-10" />
+                         </div>
+                      )}
 
-                    <div className="z-10 mt-2 min-h-[40px] w-full">
-                       {room.characters.filter(c => !c.is_hidden).length === 0 ? (
-                          <p className="font-mono text-[9px] text-zinc-600 uppercase">Sin Actividad Registrada</p>
-                       ) : (
-                          <div className="flex flex-col gap-1 w-full">
-                             <div className="flex items-center gap-1 font-mono text-[8px] text-blue-500/60 uppercase mb-1">
-                                <Users size={10} /> Sujetos Detectados: {room.characters.filter(c => !c.is_hidden).length}
-                             </div>
-                             <div className="flex flex-wrap gap-1">
-                                {room.characters.filter(c => !c.is_hidden).map(c => (
-                                   <span key={c.id} className="inline-block px-1.5 py-0.5 border border-blue-500/30 bg-black/60 font-mono text-[8px] text-blue-300 uppercase">
-                                     {c.tma_name}
-                                   </span>
-                                ))}
-                             </div>
-                          </div>
-                       )}
-                    </div>
-                 </motion.button>
-              ))}
+                      <div className="flex justify-between items-start z-10 w-full relative">
+                         <div className="flex flex-col">
+                            <h3 className={`font-mono text-[10px] sm:text-xs font-bold tracking-wider ${
+                              room.isBlockedEntry ? 'text-yellow-500/70' :
+                              isCurrent ? 'text-white' :
+                              room.is_private ? 'text-red-400' : 'text-blue-400'
+                            }`}>
+                              {room.name}
+                            </h3>
+                            {isCurrent && (
+                               <span className="font-mono text-[7px] text-blue-400 animate-pulse font-bold tracking-widest mt-0.5">
+                                 [ LOCALIZACIÓN_ACTUAL ]
+                               </span>
+                            )}
+                         </div>
+                         <div className="flex gap-2">
+                            {room.isBlockedEntry && <span title="Mantenimiento Táctico"><Skull size={14} className="text-yellow-600 animate-pulse" /></span>}
+                            {!room.isBlockedEntry && room.target_murder_room_id && (
+                               <span title="Preparación Táctica"><Skull size={14} className="text-red-500 animate-ping" /></span>
+                            )}
+                            {room.is_private && <span title="Canal Privado"><Shield size={14} className="text-red-500 animate-pulse" /></span>}
+                         </div>
+                      </div>
+
+                      <div className="z-10 mt-2 min-h-[40px] w-full">
+                         {room.characters.filter(c => !c.is_hidden).length === 0 ? (
+                            <p className="font-mono text-[9px] text-zinc-600 uppercase">Sin Actividad Registrada</p>
+                         ) : (
+                            <div className="flex flex-col gap-1 w-full">
+                               <div className="flex items-center gap-1 font-mono text-[8px] text-blue-500/60 uppercase mb-1">
+                                  <Users size={10} /> Sujetos Detectados: {room.characters.filter(c => !c.is_hidden).length}
+                               </div>
+                               
+                               {/* Avatars on Hover Tooltip (Internal version for list) */}
+                               <div className="flex flex-wrap gap-1 relative overflow-visible">
+                                  {room.characters.filter(c => !c.is_hidden).map(c => (
+                                     <div key={c.id} className="group/char relative">
+                                        <div className="w-6 h-6 border border-blue-500/30 bg-zinc-900 relative overflow-hidden">
+                                           <img 
+                                             src={c.sprite_idle_url || c.image_url || PLACEHOLDER_IMG_1} 
+                                             alt={c.tma_name}
+                                             className="w-full h-full object-cover"
+                                           />
+                                        </div>
+                                        {/* Presence Tooltip */}
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/char:block z-50 pointer-events-none">
+                                           <div className="bg-black border border-blue-500 px-2 py-1 shadow-[0_0_15px_rgba(59,130,246,0.5)] whitespace-nowrap">
+                                              <p className="font-mono text-[8px] text-blue-400 uppercase tracking-widest">{c.tma_name}</p>
+                                           </div>
+                                        </div>
+                                     </div>
+                                  ))}
+                               </div>
+                            </div>
+                         )}
+                      </div>
+                   </motion.button>
+                 );
+              })}
             </AnimatePresence>
          </div>
        )}
