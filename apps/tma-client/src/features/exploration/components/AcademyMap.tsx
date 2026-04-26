@@ -7,14 +7,18 @@ import type { TMACharacterData } from '@/features/characters/api';
 import { useRouter } from 'next/navigation';
 import { Shield, Skull, Users, MapPin, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 
 const PLACEHOLDER_IMG_1 = 'https://picsum.photos/seed/tma/200/200';
 
-function normalizeName(name: string) {
-  return name.toUpperCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim();
+
+interface TMARoom {
+  id: string;
+  name: string;
+  is_private: boolean;
+  is_hidden?: boolean;
+  coordination_stage?: string;
+  target_murder_room_id?: string | null;
 }
 
 interface LiveIntelRoom {
@@ -48,7 +52,7 @@ export function AcademyMap() {
       
       if (!roomsData || !charsData) return;
 
-      const performMerge = (dbRooms: any[], dbChars: any[]) => {
+      const performMerge = (dbRooms: TMARoom[], dbChars: TMACharacterData[]) => {
           const isStaff = userRole === 'staff' || userRole === 'superadmin';
           const isAssassin = myChar?.is_assassin || false;
 
@@ -74,14 +78,21 @@ export function AcademyMap() {
             }
 
             const isTargeted = blockedIds.has(r.id);
-            const charsInRoom = dbChars.filter(c => c.current_room_id === r.id);
+            const charsInRoom = dbChars.filter(c => {
+               if (c.current_room_id !== r.id) return false;
+               // Regla de Sigilo: No se muestran personajes ocultos a menos que seas Staff o el propio personaje
+               if (c.is_hidden) {
+                  return isStaff || c.id === myChar?.id;
+               }
+               return true;
+            });
 
             return {
               id: r.id,
               name: displayName,
               is_private: r.is_private,
-              coordination_stage: r.coordination_stage,
-              target_murder_room_id: r.target_murder_room_id,
+              coordination_stage: r.coordination_stage || 'PLANNING',
+              target_murder_room_id: r.target_murder_room_id || null,
               characters: charsInRoom as TMACharacterData[],
               isBlockedEntry: isTargeted && !isStaff && !isAssassin,
             };
@@ -117,7 +128,7 @@ export function AcademyMap() {
     };
 
     fetchLiveIntel();
-  }, [userRole, myChar?.is_assassin]);
+  }, [userRole, myChar?.is_assassin, myChar?.id]);
 
   const handleTransit = (room: LiveIntelRoom) => {
       // Redirige al cuarto
@@ -213,11 +224,14 @@ export function AcademyMap() {
                                   {room.characters.filter(c => !c.is_hidden).map(c => (
                                      <div key={c.id} className="group/char relative">
                                         <div className="w-6 h-6 border border-blue-500/30 bg-zinc-900 relative overflow-hidden">
-                                           <img 
-                                             src={c.sprite_idle_url || c.image_url || PLACEHOLDER_IMG_1} 
-                                             alt={c.tma_name}
-                                             className="w-full h-full object-cover"
-                                           />
+                                            <Image 
+                                              src={c.sprite_idle_url || c.image_url || PLACEHOLDER_IMG_1} 
+                                              alt={c.tma_name || 'Estudiante'}
+                                              width={24}
+                                              height={24}
+                                              className="w-full h-full object-cover"
+                                              unoptimized={!!(c.sprite_idle_url || c.image_url)?.includes('picsum.photos')}
+                                            />
                                         </div>
                                         {/* Presence Tooltip */}
                                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/char:block z-50 pointer-events-none">

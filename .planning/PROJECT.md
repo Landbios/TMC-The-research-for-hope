@@ -5,6 +5,11 @@ Consolidating all investigation, communication, and navigation systems into a un
 ## Core Value
 To centralize the player's agency through a single, persistent "Command Center" that reduces HUD clutter and enhances immersion through deep visual personality and real-time environmental awareness.
 
+## Current State
+- **Shipped Version**: v1.0 (Nervalis 2.0 Overhaul)
+- **Last Release**: 2026-04-26
+- **Status**: Stable / Milestone Complete
+
 ## Context
 A web-based (Next.js/React) social investigation game set in a high-tech academy. Players explore 3D environments, interact with other students, and solve murders. The "Nervalis" terminal is the primary interface for system-wide interactions.
 
@@ -18,13 +23,15 @@ A web-based (Next.js/React) social investigation game set in a high-tech academy
 - ✓ **Multi-Environment Chat**: Cross-room communication capabilities.
 - ✓ **Nervalis 2.0 Personality**: High-personality visual themes with CRT scanlines and glitch effects. — Phase 1
 - ✓ **Evidence Poll Consolidation**: Investigation polls moved to unified EVIDENCE tab. — Phase 01.1
+- ✓ **Unified Social Migration**: Global and Room-specific chat channels integrated into Nervalis. — Phase 4
+- ✓ **Live-Intel Navigation**: 3D map updated with student presence and privacy status. — Phase 2
+- ✓ **Staff Control Tab**: Dedicated "ADMIN" tab for character switching/possession (Role-based access). — Phase 3
+- ✓ **Notification Center**: Minimal HUD indicator that alerts users to pings/events when Nervalis is closed. — Phase 1
+- ✓ **Personal File**: A "SELF" tab where students can view their own profile and status. — Phase 3
+- ✓ **System Hardening**: Resolved identity-switching race conditions and poll modal persistence. — Phase 5
 
 ### Active
-- [ ] **Unified Social Migration**: Move group chats into specialized Nervalis tabs.
-- [ ] **Live-Intel Navigation**: Replace 3D map with a dynamic room list showing student presence, privacy status, and maintenance alerts.
-- [ ] **Staff Control Tab**: Dedicated "ADMIN" tab for character switching/possession (Role-based access).
-- [ ] **Notification Center**: Minimal HUD indicator that alerts users to pings/events when Nervalis is closed.
-- [ ] **Personal File**: A "SELF" tab where students can view their own profile and status.
+- [x] All core Nervalis 2.0 requirements finalized.
 
 ### Out of Scope
 - **3D Fast Travel**: No procedural movement between rooms; navigation remains list-based for efficiency.
@@ -34,20 +41,14 @@ A web-based (Next.js/React) social investigation game set in a high-tech academy
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| **List-based Navigation** | Enhances performance and provides clearer "Live Intel" metadata than the 3D map. | — Pending |
-| **Consolidated HUD** | Moving group chats/polls into Nervalis simplifies the main screen and focuses immersion on the terminal. | — Pending |
+| **Atomic Initialization** | Prevents race conditions during identity switching (Staff/NPC) to ensure correct room relocation. | — Complete |
+| **List-based Navigation** | Enhances performance and provides clearer "Live Intel" metadata than the 3D map. | — Complete |
+| **Consolidated HUD** | Moving group chats/polls into Nervalis simplifies the main screen and focuses immersion on the terminal. | — Complete |
 | **Tab Consolidation** | Renamed POLLS to EVIDENCE to serve as both active poll UI and historical archive. | — Complete |
 | **Decoupled Modals** | PrivacyPollModal moved outside Nervalis to allow room-blocking logic to function independently. | — Complete |
 
 ## Evolution
 This document evolves at phase transitions and milestone boundaries.
 
-**After each phase transition** (via `/gsd-transition`):
-1. Requirements invalidated? → Move to Out of Scope with reason
-2. Requirements validated? → Move to Validated with phase reference
-3. New requirements emerged? → Add to Active
-4. Decisions to log? → Add to Key Decisions
-5. "What This Is" still accurate? → Update if drifted
-
 ---
-*Last updated: 2026-04-26 after Phase 01.1*
+*Last updated: 2026-04-26 after Phase 5 Completion*

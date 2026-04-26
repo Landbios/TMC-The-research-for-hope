@@ -1,19 +1,21 @@
-'use client';
+import fs from 'fs';
 
-import { useEffect, useRef } from 'react';
-import { useTmaStore } from '@/store/useTmaStore';
-import { TMACharacterData, TMAGameState, getTmaCharacterById, getTMACharacter } from '@/features/characters/api';
+const storePath = 'c:/Users/opbvn/Desktop/Wira/Programacion/TMC-The-research-for-hope/apps/tma-client/src/store/useTmaStore.ts';
+let storeContent = fs.readFileSync(storePath, 'utf8');
 
-interface StateInitializerProps {
-  gameState: TMAGameState | null;
-  character: TMACharacterData | null;
-  userRole?: 'roleplayer' | 'staff' | 'superadmin';
-}
+// 1. Add setOriginalCharacter to Interface
+storeContent = storeContent.replace('patchCharacterData: (patch: Partial<TMACharacterData>) => void;', 'patchCharacterData: (patch: Partial<TMACharacterData>) => void;\n  setOriginalCharacter: (char: TMACharacterData) => void;');
 
-export function TmaStoreInitializer({ gameState, character, userRole }: StateInitializerProps) {
-  const initialized = useRef(false);
+// 2. Add setOriginalCharacter Implementation
+storeContent = storeContent.replace('patchCharacterData: (patch) => set((state) => {', 'setOriginalCharacter: (char) => set({ originalCharacter: char }),\n  patchCharacterData: (patch) => set((state) => {');
 
-    useEffect(() => {
+fs.writeFileSync(storePath, storeContent);
+
+// 3. Update TmaStoreInitializer
+const initPath = 'c:/Users/opbvn/Desktop/Wira/Programacion/TMC-The-research-for-hope/apps/tma-client/src/components/TmaStoreInitializer.tsx';
+let initContent = fs.readFileSync(initPath, 'utf8');
+
+const newEffect = `  useEffect(() => {
     if (!initialized.current) {
       const store = useTmaStore.getState();
       
@@ -59,7 +61,9 @@ export function TmaStoreInitializer({ gameState, character, userRole }: StateIni
       setupPossession();
       initialized.current = true;
     }
-  }, [gameState, character, userRole]);
+  }, [gameState, character, userRole]);`;
 
-  return null;
-}
+initContent = initContent.replace(/useEffect\(\(\) => \{[\s\S]+?\}, \[gameState, character, userRole\]\);/, newEffect);
+
+fs.writeFileSync(initPath, initContent);
+console.log('Update complete');

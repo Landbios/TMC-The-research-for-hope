@@ -21,7 +21,12 @@ interface Message {
 
 export function VerticalChatLog() {
   const myCharacterId = useTmaStore(state => state.myCharacterId);
-  const currentRoomId = '00000000-0000-0000-0000-000000000000';
+  const selectedRoomId = useTmaStore(state => state.selectedRoomId);
+  const [activeChannel, setActiveChannel] = useState<'GLOBAL' | 'LOCAL'>('GLOBAL');
+  
+  const currentRoomId = activeChannel === 'GLOBAL' 
+    ? '00000000-0000-0000-0000-000000000000' 
+    : selectedRoomId;
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +60,7 @@ export function VerticalChatLog() {
           is_whisper,
           is_system_message,
           created_at,
-          sender:tma_characters (
+          sender:tma_characters!tma_messages_sender_tma_id_fkey (
             tma_name,
             image_url
           )
@@ -64,7 +69,10 @@ export function VerticalChatLog() {
         .order('created_at', { ascending: true })
         .limit(50);
 
-      if (!error && data) {
+      if (error) {
+        console.error('Error fetching chat history:', error);
+        toast.error('Error al sincronizar historial de red');
+      } else if (data) {
         setMessages(data as unknown as Message[]);
       }
       setLoading(false);
@@ -82,9 +90,21 @@ export function VerticalChatLog() {
         filter: `tma_room_id=eq.${currentRoomId}`
       }, async (payload) => {
         const msg = payload.new as Message;
-        // Fetch sender info separately if needed or rely on local state
-        const { data: senderData } = await supabase.from('tma_characters').select('tma_name, image_url').eq('id', msg.sender_tma_id).single();
-        const fullMsg = { ...msg, sender: senderData as { tma_name: string; image_url: string } };
+        
+        let senderData = null;
+        if (!msg.is_system_message && msg.sender_tma_id) {
+           const { data } = await supabase
+             .from('tma_characters')
+             .select('tma_name, image_url')
+             .eq('id', msg.sender_tma_id)
+             .maybeSingle();
+           senderData = data;
+        }
+
+        const fullMsg = { 
+           ...msg, 
+           sender: senderData as { tma_name: string; image_url: string } 
+        };
         
         setMessages(prev => [...prev, fullMsg]);
         scrollToBottom();
@@ -129,6 +149,30 @@ export function VerticalChatLog() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
+            {/* Channel Switcher */}
+      <div className="flex gap-2 p-2 border-b border-blue-500/10 bg-black/20">
+         <button 
+           onClick={() => setActiveChannel('GLOBAL')}
+           className={`flex-1 py-1 font-mono text-[9px] uppercase tracking-widest border transition-all ${
+             activeChannel === 'GLOBAL' 
+               ? 'bg-blue-600/20 border-blue-500 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]' 
+               : 'bg-transparent border-zinc-800 text-zinc-600 hover:border-blue-500/30'
+           }`}
+         >
+           [RED_GLOBAL]
+         </button>
+         <button 
+           onClick={() => setActiveChannel('LOCAL')}
+           className={`flex-1 py-1 font-mono text-[9px] uppercase tracking-widest border transition-all ${
+             activeChannel === 'LOCAL' 
+               ? 'bg-green-600/20 border-green-500 text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.2)]' 
+               : 'bg-transparent border-zinc-800 text-zinc-600 hover:border-green-500/30'
+           }`}
+         >
+           [SECTOR_LOCAL]
+         </button>
+      </div>
+
       {/* Messages Log */}
       <div 
         ref={scrollRef}
@@ -162,7 +206,7 @@ export function VerticalChatLog() {
               <div className={`
                 max-w-[85%] px-3 py-2 text-[11px] font-sans
                 ${isSystem ? 'bg-red-500/5 border border-red-500/20 text-red-500 italic text-[10px]' : 
-                  (isMe ? 'bg-blue-600/20 border border-blue-500/30 text-blue-100 rounded-l-md rounded-br-sm' : 
+                  (isMe ? `${activeChannel === 'GLOBAL' ? 'bg-blue-600/20 border-blue-500/30 text-blue-100' : 'bg-green-600/20 border-green-500/30 text-green-100'} rounded-l-md rounded-br-sm` : 
                    'bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-r-md rounded-bl-sm')}
               `}>
                 {msg.content}
@@ -194,9 +238,9 @@ export function VerticalChatLog() {
          </div>
          <div className="flex justify-between mt-1 px-1">
             <span className="font-mono text-[7px] text-blue-500/50 uppercase tracking-tighter flex items-center gap-1">
-              <MessageSquare size={8} /> RED: GLOBAL_COMM
+              <MessageSquare size={8} /> RED: ${activeChannel === 'GLOBAL' ? 'GLOBAL_COMM' : 'SECTOR_LINK'}
             </span>
-            <span className="font-mono text-[7px] text-green-500 uppercase tracking-tighter">ESTADO: PÚBLICO</span>
+            <span className="font-mono text-[7px] text-green-500 uppercase tracking-tighter">ESTADO: ${activeChannel === 'GLOBAL' ? 'PÚBLICO' : 'ENCRIPTADO_SECTOR'}</span>
          </div>
       </div>
     </div>

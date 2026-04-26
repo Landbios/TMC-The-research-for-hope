@@ -77,6 +77,8 @@ interface TmaStoreState {
   setPendingPolls: (polls: TMAEvidencePoll[] | ((prev: TMAEvidencePoll[]) => TMAEvidencePoll[])) => void;
   setActivePrivacyPoll: (poll: TMARoomPrivacyPoll | null) => void;
   setMyCharacterId: (id: string | null) => void;
+  patchCharacterData: (patch: Partial<TMACharacterData>) => void;
+  setOriginalCharacter: (char: TMACharacterData) => void;
   setStoreInitialized: (initialized: boolean) => void;
   resetToInitial: () => void;
 }
@@ -130,6 +132,21 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
       // Solo guardamos como original si es un PC (Jugador)
       originalCharacter: !isActuallyNpc ? char : state.originalCharacter,
     };
+  }),
+
+  setOriginalCharacter: (char) => set({ originalCharacter: char }),
+  patchCharacterData: (patch) => set((state) => {
+     const isHidden = patch.is_hidden !== undefined ? patch.is_hidden : state.isHidden;
+     const isAssassin = patch.is_assassin !== undefined ? patch.is_assassin : state.isAssassin;
+     const status = patch.status !== undefined ? patch.status : state.characterStatus;
+     
+     return {
+        isHidden,
+        isAssassin,
+        characterStatus: status as 'ALIVE' | 'DEAD' | 'MISSING' | 'GUILTY',
+        investigationPoints: patch.investigation_points !== undefined ? patch.investigation_points : state.investigationPoints,
+        murderPoints: patch.murder_points !== undefined ? patch.murder_points : state.murderPoints,
+     };
   }),
 
   setPossession: (char) => {

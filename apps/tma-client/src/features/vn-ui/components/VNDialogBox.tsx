@@ -59,15 +59,12 @@ export function VNDialogBox() {
     
     // Inyectamos al usuario actual en la sala para que Sea Realtime
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data: myChar } = await supabase.from('tma_characters').select('id').eq('user_id', user.id).limit(1).single();
-      if (myChar) {
-        await supabase.from('tma_characters').update({ 
-           current_room_id: selectedRoomId, 
-           is_hidden: isHidden 
-        }).eq('id', myChar.id);
-      }
+    const myCharId = useTmaStore.getState().myCharacterId;
+    if (myCharId) {
+      await supabase.from('tma_characters').update({ 
+         current_room_id: selectedRoomId, 
+         is_hidden: isHidden 
+      }).eq('id', myCharId);
     }
     
     router.push(`/rooms/${selectedRoomId}`);

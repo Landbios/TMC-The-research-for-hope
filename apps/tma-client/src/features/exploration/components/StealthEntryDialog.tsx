@@ -7,7 +7,7 @@ import { DiceAnimation } from '@/features/shared/components/DiceAnimation';
 
 interface StealthEntryDialogProps {
   roomName: string;
-  onDecide: (action: 'STEALTH' | 'NORMAL') => void;
+  onDecide: (action: 'STEALTH' | 'NORMAL', success?: boolean) => void;
   onCancel: () => void;
 }
 
@@ -32,13 +32,13 @@ export function StealthEntryDialog({ roomName, onDecide, onCancel }: StealthEntr
       
       // Delay antes de cerrar para ver el resultado
       setTimeout(() => {
-        onDecide('STEALTH');
+        onDecide('STEALTH', isSuccess);
       }, 1500);
     }, 2000);
   };
 
   return (
-    <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+    <div className="fixed inset-0 z-250 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md pointer-events-auto">
       <div className="w-full max-w-md bg-[#020202] border-2 border-amber-600/50 p-6 relative overflow-hidden shadow-[0_0_50px_rgba(217,119,6,0.3)]">
         
         {/* CRT Scanline */}

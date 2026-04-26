@@ -7,8 +7,9 @@ import { Shield, X, Check, Timer } from 'lucide-react';
 
 export function PrivacyPollModal({ embedded = false }: { embedded?: boolean }) {
   const activePrivacyPoll = useTmaStore(state => state.activePrivacyPoll);
-  const setActivePrivacyPoll = useTmaStore(state => state.setActivePrivacyPoll);
   const myCharacterId = useTmaStore(state => state.myCharacterId);
+  const selectedRoomId = useTmaStore(state => state.selectedRoomId);
+  const setActivePrivacyPoll = useTmaStore(state => state.setActivePrivacyPoll);
   const setSelectedRoomId = useTmaStore(state => state.setSelectedRoomId);
   
   const [hasVoted, setHasVoted] = useState(false);
@@ -36,12 +37,12 @@ export function PrivacyPollModal({ embedded = false }: { embedded?: boolean }) {
     if (activePrivacyPoll && activePrivacyPoll.status !== 'PENDING') {
       const timer = setTimeout(() => {
         setActivePrivacyPoll(null);
-      }, 2000);
+      }, 800);
       return () => clearTimeout(timer);
     }
   }, [activePrivacyPoll, setActivePrivacyPoll]);
 
-  if (!activePrivacyPoll || !myCharacterId) return null;
+  if (!activePrivacyPoll || !myCharacterId || activePrivacyPoll.room_id !== selectedRoomId) return null;
 
   const handleVote = async (vote: boolean) => {
     if (hasVoted) return;
@@ -81,7 +82,7 @@ export function PrivacyPollModal({ embedded = false }: { embedded?: boolean }) {
   };
 
   return (
-    <div className={embedded ? "w-full flex items-center justify-center p-4 bg-transparent" : "fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm pointer-events-none"}>
+    <div className={embedded ? "w-full flex items-center justify-center p-4 bg-transparent" : "fixed inset-0 z-250 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm pointer-events-none"}>
       <div className="pointer-events-auto w-full max-w-sm bg-[#050505] border border-blue-500 shadow-[0_0_30px_rgba(59,130,246,0.3)] p-6 relative overflow-hidden animate-in fade-in zoom-in duration-300">
         
         {/* CRT Overlay */}

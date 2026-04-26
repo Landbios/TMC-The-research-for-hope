@@ -61,8 +61,7 @@ export function InsideRoomArena() {
   
   const vnWhispers = useTmaStore((state) => state.vnWhispers);
   const activeGroupMessages = useTmaStore((state) => state.activeGroupMessages);
-  const clearVnWhispers = useTmaStore((state) => state.clearVnWhispers);
-  const clearVnGroupMessages = useTmaStore((state) => state.clearVnGroupMessages);
+
   
   const vnMode = useTmaStore((state) => state.vnMode);
   const setVnMode = useTmaStore((state) => state.setVnMode);
@@ -91,9 +90,14 @@ export function InsideRoomArena() {
     const supabase = createClient();
         const isStaff = userRole === 'staff' || userRole === 'superadmin';
 
-        // 1. Obtener datos de la sala actual y de la sala de coordinación global
+        // 1. Obtener datos de la sala, del personaje y de coordinación
         const { data: currentRoom } = await supabase.from('tma_rooms').select('is_private, name').eq('id', roomId).single();
+        const { data: myChar } = await supabase.from('tma_characters').select('is_hidden').eq('id', myCharacterId).single();
         const { data: coordRoom } = await supabase.from('tma_rooms').select('id, name, target_murder_room_id, coordination_stage').eq('name', 'COORDINACIÓN DE ASESINATO').maybeSingle();
+
+        if (myChar?.is_hidden) {
+           setIsStealthing(true);
+        }
 
         if (currentRoom) {
            setIsPrivate(currentRoom.is_private);
@@ -138,9 +142,13 @@ export function InsideRoomArena() {
         }
 
         // Si pasó los filtros, manejar privacidad/sigilo
-        if (currentRoom?.is_private && !isStealthing) {
-           setShowStealthEntry(true);
+        if (currentRoom?.is_private) {
+           if (!isStealthing) {
+              setShowStealthEntry(true);
+           }
+           // Si isStealthing es true, el handleStealthResolve ya se encargó de actualizar is_hidden en DB
         } else {
+           // En salas públicas, siempre somos visibles
            await supabase.from('tma_characters').update({ current_room_id: roomId, is_hidden: false }).eq('id', myCharacterId);
         }
     };
@@ -170,87 +178,47 @@ export function InsideRoomArena() {
     let myCharData: TMACharacterData | null = null;
     
     const fetchChars = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: charData } = await supabase.from('tma_characters').select('*').eq('user_id', user?.id).limit(1).single();
+       await supabase.auth.getUser();
+      const currentId = useTmaStore.getState().myCharacterId;
       
-      if (charData) {
-         myCharData = charData as TMACharacterData;
-         currentCharacterId = charData.id;
-         useTmaStore.getState().setCharacterData(charData as TMACharacterData);
+      // Fetch specifically the active character (either the original PC or a possessed NPC)
+      const { data: charData } = await supabase.from('tma_characters')
+        .select('*, character:characters(image_url)')
+        .eq('id', currentId)
+        .limit(1)
+        .single();
+      
+      if (charData && mounted) {
+         const processed = {
+            ...charData,
+            image_url: charData.image_url || (charData as TMACharacterData & { character?: { image_url?: string } }).character?.image_url
+         } as TMACharacterData;
+         myCharData = processed;
+         currentCharacterId = processed.id;
+         useTmaStore.getState().setCharacterData(processed);
       }
 
-      const { data } = await supabase.from('tma_characters').select('*').eq('current_room_id', roomId);
+      const { data } = await supabase.from('tma_characters')
+        .select('*, character:characters(image_url)')
+        .eq('current_room_id', roomId);
+        
       if (data && mounted) {
-        setCharacters(data.filter(c => !c.is_hidden) as TMACharacterData[]);
+        const processed = data.map(c => ({
+           ...c,
+           // Fallback image from linked character if tma image is missing
+           image_url: c.image_url || (c as TMACharacterData & { character?: { image_url?: string } }).character?.image_url
+        }));
+        // Filtramos: ocultos no se ven, EXCEPTO el propio usuario para que sepa dónde está
+        setCharacters(processed.filter(c => !c.is_hidden || c.id === myCharacterId) as TMACharacterData[]);
       }
 
       if (mounted) {
         const roomClues = await getRoomClues(roomId);
         setClues(roomClues);
       }
-      
-      if (!mounted) return;
+    };
 
-      // 1. Suscripción a Personajes
-      const chan1 = supabase.channel(`room_chars_${roomId}_${Date.now()}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'tma_characters' }, (payload) => {
-           const char = payload.new as TMACharacterData | undefined;
-           if (!char) return; 
-
-            // Permitimos que todos los personajes entren en el estado local 
-            // (incluyendo al usuario actual para trackear burbujas/estados temporales)
-             if (char.current_room_id === roomId) {
-                setCharacters(prev => {
-                   if(prev.find(c => c.id === char.id)) {
-                      return prev.map(c => c.id === char.id ? { ...c, ...char } : c);
-                   }
-                   return [...prev, char];
-                });
-             } else {
-                setCharacters(prev => prev.filter(c => c.id !== char.id));
-             }
-          });
-      chan1.subscribe();
-      channelsToClean.push(chan1);
-
-      // 2. Suscripción a Polls de Privacidad
-      const chan2 = supabase.channel(`privacy_polls_${roomId}_${Date.now()}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tma_room_privacy_polls', filter: `room_id=eq.${roomId}` }, (payload) => {
-           const poll = payload.new as import('@/store/useTmaStore').TMARoomPrivacyPoll;
-           if (poll.status === 'PENDING' && mounted) {
-              setActivePrivacyPoll(poll);
-              if (!useTmaStore.getState().isNervalisOpen && poll.initiator_id !== currentCharacterId) {
-                  useTmaStore.getState().setHasUnreadSignals(true);
-              }
-           }
-        })
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tma_room_privacy_polls', filter: `room_id=eq.${roomId}` }, (payload) => {
-           const poll = payload.new as import('@/store/useTmaStore').TMARoomPrivacyPoll;
-           if (mounted) setActivePrivacyPoll(poll);
-        });
-      chan2.subscribe();
-      channelsToClean.push(chan2);
-
-       // 3. Suscripción a la propia Sala (Estado de Privacidad y Fases de Coordinación)
-      const chan3 = supabase.channel(`room_meta_${roomId}_${Date.now()}`)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tma_rooms', filter: `id=eq.${roomId}` }, (payload) => {
-           const room = payload.new as { 
-              is_private: boolean; 
-              coordination_stage: 'PLANNING' | 'PREPARATION' | 'EXECUTION' | 'FINISHED'; 
-              target_murder_room_id: string | null 
-           };
-           if (mounted) {
-              setIsPrivate(room.is_private);
-              setRoomMetadata({
-                 coordination_stage: room.coordination_stage || 'PLANNING',
-                 target_murder_room_id: room.target_murder_room_id
-              });
-           }
-         });
-      chan3.subscribe();
-      channelsToClean.push(chan3);
-      
-      const fetchRoomMeta = async () => {
+    const fetchRoomMeta = async () => {
          const { data } = await supabase.from('tma_rooms').select('coordination_stage, target_murder_room_id').eq('id', roomId).single();
          if (data && mounted) {
             setRoomMetadata({
@@ -258,12 +226,78 @@ export function InsideRoomArena() {
                target_murder_room_id: data.target_murder_room_id
             });
          }
-      };
+    };
+
+    // 1. Suscripción a Personajes
+    const chan1 = supabase.channel(`room_chars_${roomId}_${Date.now()}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tma_characters' }, (payload) => {
+         const char = payload.new as TMACharacterData | undefined;
+         if (!char) return; 
+
+           // Solo añadimos al personaje si está en esta sala y NO está oculto 
+           // (o es el propio usuario, para que vea su propio sprite)
+           if (char.current_room_id === roomId && (!char.is_hidden || char.id === myCharacterId)) {
+              setCharacters(prev => {
+                 if(prev.find(c => c.id === char.id)) {
+                    return prev.map(c => c.id === char.id ? { ...c, ...char } : c);
+                 }
+                 return [...prev, char];
+              });
+           } else {
+              // Si cambió de sala o se ocultó, lo eliminamos de la vista
+              setCharacters(prev => prev.filter(c => c.id !== char.id));
+           }
+        });
+    chan1.subscribe();
+    channelsToClean.push(chan1);
+
+    // 2. Suscripción a Polls de Privacidad
+    const chan2 = supabase.channel(`privacy_polls_${roomId}_${Date.now()}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tma_room_privacy_polls', filter: `room_id=eq.${roomId}` }, (payload) => {
+         const poll = payload.new as import('@/store/useTmaStore').TMARoomPrivacyPoll;
+         if (poll.status === 'PENDING' && mounted) {
+            setActivePrivacyPoll(poll);
+            if (!useTmaStore.getState().isNervalisOpen && poll.initiator_id !== currentCharacterId) {
+                useTmaStore.getState().setHasUnreadSignals(true);
+            }
+         }
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tma_room_privacy_polls', filter: `room_id=eq.${roomId}` }, (payload) => {
+         const poll = payload.new as import('@/store/useTmaStore').TMARoomPrivacyPoll;
+         const currentPoll = useTmaStore.getState().activePrivacyPoll;
+         
+         // Only update if it's our current active poll or if it's a new pending one
+         if (mounted && (currentPoll?.id === poll.id || poll.status === 'PENDING')) {
+            // If it was resolved, we set it but the modal will handle its own closing
+            setActivePrivacyPoll(poll);
+         }
+      });
+    chan2.subscribe();
+    channelsToClean.push(chan2);
+
+     // 3. Suscripción a la propia Sala (Estado de Privacidad y Fases de Coordinación)
+    const chan3 = supabase.channel(`room_meta_${roomId}_${Date.now()}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tma_rooms', filter: `id=eq.${roomId}` }, (payload) => {
+         const room = payload.new as { 
+            is_private: boolean; 
+            coordination_stage: 'PLANNING' | 'PREPARATION' | 'EXECUTION' | 'FINISHED'; 
+            target_murder_room_id: string | null 
+         };
+         if (mounted) {
+            setIsPrivate(room.is_private);
+            setRoomMetadata({
+               coordination_stage: room.coordination_stage || 'PLANNING',
+               target_murder_room_id: room.target_murder_room_id
+            });
+         }
+       });
+    chan3.subscribe();
+    channelsToClean.push(chan3);
       
       const fetchRoomHistory = async () => {
          const { data } = await supabase.from('tma_messages').select(`
             id, sender_tma_id, target_tma_id, content, is_whisper, is_system_message,
-            sender:tma_characters (tma_name, image_url, sprite_idle_url)
+            sender:tma_characters!tma_messages_sender_tma_id_fkey (tma_name, image_url, sprite_idle_url)
          `).eq('tma_room_id', roomId).order('created_at', { ascending: true }).limit(50);
          
          if (data && mounted) {
@@ -290,9 +324,6 @@ export function InsideRoomArena() {
             useTmaStore.getState().setVnGroupMessages(formattedMessages);
          }
       };
-
-      fetchRoomMeta();
-      fetchRoomHistory();
 
       // 5. Suscripción a Evidencias (Visibilidad)
       const chan5 = supabase.channel(`room_evidences_${roomId}_${Date.now()}`)
@@ -358,38 +389,46 @@ export function InsideRoomArena() {
                  sprite_url: spriteUrl
               });
            }
-            else if (!msg.is_whisper && !msg.is_system_message) {
-              // 1. Burbujas flotantes 3D
-              setCharacters(prev => prev.map(c => {
-                 if (c.id === msg.sender_tma_id) {
-                    return { ...c, publicMessage: msg.content };
-                 }
-                 return c;
-              }));
+            else if (!msg.is_whisper) {
+              // Si NO es whisper, va al chat grupal (incluyendo sistemas)
               
-              setTimeout(() => {
-                 if (!mounted) return;
-                 setCharacters(prev => prev.map(c => {
-                    if (c.id === msg.sender_tma_id && c.publicMessage === msg.content) {
-                       return { ...c, publicMessage: undefined };
-                    }
-                    return c;
-                 }));
-              }, 8000);
+              // 1. Burbujas flotantes 3D (Solo para mensajes de texto de personajes, NO sistemas)
+              if (!msg.is_system_message) {
+                setCharacters(prev => prev.map(c => {
+                   if (c.id === msg.sender_tma_id) {
+                      return { ...c, publicMessage: msg.content };
+                   }
+                   return c;
+                }));
+                
+                setTimeout(() => {
+                   if (!mounted) return;
+                   setCharacters(prev => prev.map(c => {
+                      if (c.id === msg.sender_tma_id && c.publicMessage === msg.content) {
+                         return { ...c, publicMessage: undefined };
+                      }
+                      return c;
+                   }));
+                }, 8000);
+              }
 
               // 2. Ruteo a Conversación Grupal VN
               let senderName = 'Estudiante';
               let spriteUrl: string | undefined = undefined;
               
-              const isMe = msg.sender_tma_id === currentCharacterId;
-              if (isMe && myCharData) {
-                 senderName = myCharData.tma_name || 'Yo';
-                 spriteUrl = myCharData.sprite_idle_url || myCharData.image_url;
+              if (msg.is_system_message) {
+                 senderName = 'SISTEMA';
               } else {
-                 const foundChar = charactersRef.current.find(c => c.id === msg.sender_tma_id);
-                 if (foundChar) {
-                    senderName = foundChar.tma_name || 'Desconocido';
-                    spriteUrl = foundChar.sprite_idle_url || foundChar.image_url;
+                 const isMe = msg.sender_tma_id === currentCharacterId;
+                 if (isMe && myCharData) {
+                    senderName = myCharData.tma_name || 'Yo';
+                    spriteUrl = myCharData.sprite_idle_url || myCharData.image_url;
+                 } else {
+                    const foundChar = charactersRef.current.find(c => c.id === msg.sender_tma_id);
+                    if (foundChar) {
+                       senderName = foundChar.tma_name || 'Desconocido';
+                       spriteUrl = foundChar.sprite_idle_url || foundChar.image_url;
+                    }
                  }
               }
 
@@ -399,25 +438,40 @@ export function InsideRoomArena() {
                  sender_name: senderName,
                  content: msg.content,
                  is_whisper: false,
-                 is_system_message: false,
+                 is_system_message: msg.is_system_message,
                  sprite_url: spriteUrl
               });
            }
         });
       chan4.subscribe();
       channelsToClean.push(chan4);
-    };
-    
-    fetchChars();
 
+      const init = async () => {
+         await fetchChars();
+         await fetchRoomMeta();
+         // Intentar obtener poll de privacidad inicial
+         const { data: poll } = await supabase.from('tma_room_privacy_polls')
+           .select('*')
+           .eq('room_id', roomId)
+           .eq('status', 'PENDING')
+           .limit(1)
+           .maybeSingle();
+         if (poll && mounted) setActivePrivacyPoll(poll as import('@/store/useTmaStore').TMARoomPrivacyPoll);
+         
+         await fetchRoomHistory();
+      };
+
+      init();
+    
     // Timer de auto-cierre...
     const autoCloseInterval = setInterval(() => {
        const state = useTmaStore.getState();
        const now = Date.now();
-       if (state.vnMode === 'GROUP' && state.activeGroupMessages.length > 0 && (now - state.lastVnActivity > 30000)) {
-          state.clearVnGroupMessages();
-          state.setVnMode('WHISPER');
-       }
+        if (state.vnMode === 'GROUP' && state.activeGroupMessages.length > 0 && (now - state.lastVnActivity > 30000)) {
+           // Solo cerramos el overlay, NO borramos los mensajes
+           state.setVnMode('WHISPER');
+           state.setVnState({ isActive: false });
+        }
     }, 5000);
 
     return () => {
@@ -451,24 +505,36 @@ export function InsideRoomArena() {
     }
   };
 
-  const handleStealthResolve = async (action: 'STEALTH' | 'NORMAL') => {
+  const handleStealthResolve = async (action: 'STEALTH' | 'NORMAL', success?: boolean) => {
      setShowStealthEntry(false);
      setIsStealthing(true);
      const supabase = createClient();
      
-     if (action === 'STEALTH') {
+     if (action === 'STEALTH' && success === true) {
+        // Éxito: Entra oculto
         await supabase.from('tma_characters').update({ current_room_id: roomId, is_hidden: true }).eq('id', myCharacterId);
-        // Optimistic update for local UI
-        useTmaStore.getState().setCharacterData({ id: myCharacterId, is_hidden: true } as Partial<TMACharacterData> as TMACharacterData); 
+        useTmaStore.getState().patchCharacterData({ is_hidden: true }); 
+        toast.success("INFILTRACIÓN EXITOSA", { description: "Has entrado en la sala sin ser detectado." });
      } else {
+        // Fallo o Entrada Normal
+        const isFailure = action === 'STEALTH' && success === false;
         await supabase.from('tma_characters').update({ current_room_id: roomId, is_hidden: false }).eq('id', myCharacterId);
-        useTmaStore.getState().setCharacterData({ id: myCharacterId, is_hidden: false } as Partial<TMACharacterData> as TMACharacterData);
+        useTmaStore.getState().patchCharacterData({ is_hidden: false });
+        
+        const content = isFailure 
+           ? `[ALERTA DE SEGURIDAD] Se ha detectado una presencia intentando infiltrarse en la sala.`
+           : `SISTEMA: Un nuevo estudiante ha entrado en la sala.`;
+
         await supabase.from('tma_messages').insert({
            tma_room_id: roomId,
            sender_tma_id: myCharacterId,
-           content: `SISTEMA: Un nuevo estudiante ha entrado en la sala.`,
+           content: content,
            is_system_message: true
         });
+
+        if (isFailure) {
+           toast.error("INFILTRACIÓN FALLIDA", { description: "Tu presencia ha sido detectada por los sensores de la sala." });
+        }
      }
   };
 
@@ -547,24 +613,24 @@ export function InsideRoomArena() {
       </Suspense>
       
       {vnWhispers.length > 0 && vnMode === 'WHISPER' && (
-         <VNChatOverlay 
-           messages={vnWhispers} 
-           onClose={() => {
-              clearVnWhispers();
-              setVnState({ isActive: false });
-           }} 
-         />
+          <VNChatOverlay 
+            messages={vnWhispers} 
+            onClose={() => {
+               // No borramos para mantener permanencia
+               setVnState({ isActive: false });
+            }} 
+          />
       )}
 
       {activeGroupMessages.length >= 0 && vnMode === 'GROUP' && (
-         <VNChatOverlay 
-           messages={activeGroupMessages} 
-           onClose={() => {
-              clearVnGroupMessages();
-              setVnMode('WHISPER');
-              setVnState({ isActive: false });
-           }} 
-         />
+          <VNChatOverlay 
+            messages={activeGroupMessages} 
+            onClose={() => {
+               // No borramos para mantener permanencia
+               setVnMode('WHISPER');
+               setVnState({ isActive: false });
+            }} 
+          />
       )}
 
       {activeClue && vnMode === 'CLUE' && (

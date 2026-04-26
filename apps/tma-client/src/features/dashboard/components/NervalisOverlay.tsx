@@ -6,7 +6,8 @@ import { useTmaStore } from '@/store/useTmaStore';
 import { 
   X, FileText, Users, Settings, Cpu, 
   Terminal, Activity, Globe, Monitor,
-  MessageSquare, User, Shield, ShieldAlert
+  MessageSquare, User, Shield, ShieldAlert,
+  Search, Heart, Zap, Target
 } from 'lucide-react';
 import { VerticalChatLog } from './VerticalChatLog';
 import { EvidenceTab } from '@/features/investigation/components/EvidenceTab';
@@ -28,7 +29,9 @@ export function NervalisOverlay() {
   const isStaff = userRole === 'staff' || userRole === 'superadmin';
   const [students, setStudents] = useState<TMACharacterData[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<TMACharacterData | null>(null);
+  const [confirmingPossession, setConfirmingPossession] = useState<string | null>(null);
   
   const constraintsRef = useRef(null);
   const hasUnreadSignals = useTmaStore(state => state.hasUnreadSignals);
@@ -89,7 +92,7 @@ export function NervalisOverlay() {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[300] pointer-events-none overflow-hidden" ref={constraintsRef}>
+    <div className="fixed inset-0 z-300 pointer-events-none overflow-hidden" ref={constraintsRef}>
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -247,19 +250,30 @@ export function NervalisOverlay() {
                                        {useTmaStore.getState().originalCharacter?.tma_biography || "Ningún expediente biográfico ha sido enlazado a esta unidad neural."}
                                     </div>
 
-                                    <div className="flex items-center justify-center md:justify-start gap-4 pt-2">
-                                       <div className="px-4 py-2 border border-blue-500/40 bg-blue-500/10 rounded-sm">
-                                          <p className="font-mono text-[9px] text-zinc-500 uppercase tracking-widest mb-1">Vitalidad</p>
-                                          <p className={`font-mono text-sm uppercase font-bold tracking-widest ${useTmaStore.getState().originalCharacter?.status === 'ALIVE' ? 'text-green-500' : 'text-red-500'}`}>
-                                             {useTmaStore.getState().originalCharacter?.status}
-                                          </p>
-                                       </div>
-                                       <div className="px-4 py-2 border border-blue-500/40 bg-blue-500/10 rounded-sm">
-                                          <p className="font-mono text-[9px] text-zinc-500 uppercase tracking-widest mb-1">Capacidad Intelectual</p>
-                                          <p className="font-mono text-sm font-bold text-zinc-200 tracking-widest">
-                                             {useTmaStore.getState().originalCharacter?.investigation_points} I.P.
-                                          </p>
-                                       </div>
+                                    <div className="space-y-4 pt-2 max-w-xs">
+                                        <StatusBar 
+                                          label="Sincronización Vital" 
+                                          value={useTmaStore.getState().originalCharacter?.status === 'ALIVE' ? 100 : 0} 
+                                          max={100} 
+                                          color={useTmaStore.getState().originalCharacter?.status === 'ALIVE' ? 'text-green-500' : 'text-red-500'} 
+                                          icon={Heart} 
+                                        />
+                                        <StatusBar 
+                                          label="Capacidad Neural" 
+                                          value={useTmaStore.getState().originalCharacter?.investigation_points || 0} 
+                                          max={7} 
+                                          color="text-blue-500" 
+                                          icon={Zap} 
+                                        />
+                                        {useTmaStore.getState().originalCharacter?.is_assassin && (
+                                           <StatusBar 
+                                             label="Protocolo de Ejecución" 
+                                             value={useTmaStore.getState().originalCharacter?.murder_points || 0} 
+                                             max={10} 
+                                             color="text-red-500" 
+                                             icon={Target} 
+                                           />
+                                        )}
                                     </div>
                                  </div>
                               </div>
@@ -278,12 +292,26 @@ export function NervalisOverlay() {
                               <span className="font-mono text-[8px] text-zinc-500">[{students.length}_SUJETOS]</span>
                            </div>
 
-                           <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
+                                                       <div className="relative mb-2 shrink-0">
+                               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500/50" size={14} />
+                               <input 
+                                 type="text"
+                                 placeholder="BUSCAR_SUJETO..."
+                                 value={searchQuery}
+                                 onChange={(e) => setSearchQuery(e.target.value)}
+                                 className="w-full bg-black/40 border border-blue-500/20 py-2 pl-9 pr-4 font-mono text-[10px] text-blue-400 focus:outline-hidden focus:border-blue-500/60 transition-colors uppercase"
+                               />
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
                               {loading ? (
                                 <div className="flex items-center justify-center h-20"><Loader /></div>
                               ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                   {students.map(student => (
+                                   {students.filter(s => 
+                                       (s.tmc_character?.name || s.tma_name || '').toUpperCase().includes(searchQuery.toUpperCase()) ||
+                                       (s.tma_title || '').toUpperCase().includes(searchQuery.toUpperCase())
+                                    ).map(student => (
                                      <StudentCard 
                                        key={student.id} 
                                        student={student} 
@@ -325,7 +353,15 @@ export function NervalisOverlay() {
                                          <div className="grid grid-cols-2 gap-2 text-[8px] uppercase">
                                             <div className="text-zinc-500">Estado: <span className={selectedStudent.status === 'ALIVE' ? 'text-green-500' : 'text-red-500'}>{selectedStudent.status}</span></div>
                                             <div className="text-zinc-500">Energía: <span className="text-zinc-300">{selectedStudent.investigation_points} IP</span></div>
-                                         </div>
+                                          </div>
+
+                                          {selectedStudent.tmc_character && (
+                                             <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[7px] border-t border-blue-500/10 pt-2 uppercase">
+                                                <div className="text-zinc-500">Edad: <span className="text-zinc-300">{selectedStudent.tmc_character.age || '??'}</span></div>
+                                                <div className="text-zinc-500">Altura: <span className="text-zinc-300">{selectedStudent.tmc_character.height || '??'}</span></div>
+                                                <div className="text-zinc-500">Origen: <span className="text-zinc-300 truncate">{selectedStudent.tmc_character.nationality || 'DESCONOCIDO'}</span></div>
+                                             </div>
+                                          )}
                                          <div className="mt-3 text-[9px] text-blue-300/80 italic border-l-2 border-blue-500/30 pl-2">
                                             {selectedStudent.tma_biography || "No existen registros formales del sujeto en los archivos de la academia."}
                                          </div>
@@ -385,7 +421,10 @@ export function NervalisOverlay() {
                                 <div className="flex items-center justify-center h-20"><Loader /></div>
                               ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                   {students.map(student => (
+                                   {students.filter(s => 
+                                       (s.tmc_character?.name || s.tma_name || '').toUpperCase().includes(searchQuery.toUpperCase()) ||
+                                       (s.tma_title || '').toUpperCase().includes(searchQuery.toUpperCase())
+                                    ).map(student => (
                                      <StudentCard 
                                        key={student.id} 
                                        student={student} 
@@ -428,14 +467,26 @@ export function NervalisOverlay() {
                                          </div>
                                          {(selectedStudent.is_npc || selectedStudent.user_id === useTmaStore.getState().originalCharacter?.user_id) && (
                                             <button 
-                                               onClick={() => {
-                                                 useTmaStore.getState().setPossession(selectedStudent);
-                                                 toast.success(`POSESIÓN NEURAL: ${selectedStudent.tma_name}`);
-                                               }}
-                                               className="mt-3 w-full py-1 bg-red-500/20 border border-red-500 text-red-500 text-[9px] uppercase hover:bg-red-500 hover:text-black transition-colors"
-                                            >
-                                               Inyectar Posesión
-                                            </button>
+                                                onClick={() => {
+                                                  if (confirmingPossession === selectedStudent.id) {
+                                                    useTmaStore.getState().setPossession(selectedStudent);
+                                                    toast.success(`[OVERWRITE_SUCCESS]: Control total de ${selectedStudent.tma_name} establecido.`);
+                                                    setConfirmingPossession(null);
+                                                  } else {
+                                                    setConfirmingPossession(selectedStudent.id);
+                                                    setTimeout(() => setConfirmingPossession(null), 3000);
+                                                  }
+                                                }}
+                                                className={`mt-3 w-full py-1 border transition-all duration-300 font-bold text-[9px] uppercase ${
+                                                  confirmingPossession === selectedStudent.id 
+                                                    ? 'bg-red-600 border-white text-white animate-pulse shadow-[0_0_15px_rgba(255,0,0,0.5)] scale-105' 
+                                                    : 'bg-red-500/20 border-red-500 text-red-500 hover:bg-red-500/40'
+                                                }`}
+                                             >
+                                                {confirmingPossession === selectedStudent.id 
+                                                  ? '¿CONFIRMAR_SOBREESCRITURA?' 
+                                                  : 'EJECUTAR_SOBREESCRITURA_NEURAL'}
+                                             </button>
                                          )}
                                       </div>
                                    </div>
@@ -510,6 +561,12 @@ function StudentCard({ student, isSelected, onClick }: { student: TMACharacterDa
          <div className={`text-[6px] px-1 inline-block uppercase font-bold ${student.status === 'ALIVE' ? 'text-green-500' : 'text-red-500'}`}>
             {student.status}
          </div>
+         <div className={`text-[6px] ml-2 px-1 inline-block uppercase font-bold border ${student.is_npc ? 'border-zinc-700 text-zinc-500' : 'border-blue-500/30 text-blue-400'}`}>
+            {student.is_npc ? 'NPC' : 'USER'}
+         </div>
+         <div className={`text-[6px] ml-2 px-1 inline-block uppercase font-bold border ${student.is_npc ? 'border-zinc-700 text-zinc-500' : 'border-blue-500/30 text-blue-400'}`}>
+            {student.is_npc ? 'NPC' : 'USER'}
+         </div>
       </div>
       {isOriginal && <div className="absolute top-0 right-0 w-1.5 h-1.5 bg-blue-500" title="TU REGISTRO" />}
     </button>
@@ -520,6 +577,29 @@ function Loader() {
   return (
     <div className="flex gap-1 items-center">
        {[1,2,3].map(i => <motion.div key={i} animate={{ opacity: [0.2, 1, 0.2] }} transition={{ repeat: Infinity, duration: 1, delay: i * 0.2 }} className="w-1 h-3 bg-blue-500" />)}
+    </div>
+  );
+}
+
+function StatusBar({ label, value, max, color, icon: Icon }: { label: string, value: number, max: number, color: string, icon: any }) {
+  const percentage = Math.min(100, Math.max(0, (value / max) * 100));
+  return (
+    <div className="w-full space-y-1">
+      <div className="flex justify-between items-center px-1">
+        <span className="font-mono text-[8px] text-zinc-500 uppercase tracking-widest flex items-center gap-1">
+          <Icon size={10} className={color} /> {label}
+        </span>
+        <span className={`font-mono text-[9px] font-bold ${color}`}>{value} / {max}</span>
+      </div>
+      <div className="h-1 w-full bg-zinc-900/50 border border-white/5 relative overflow-hidden">
+        <motion.div 
+          initial={{ width: 0 }}
+          animate={{ width: `${percentage}%` }}
+          transition={{ duration: 1, ease: "easeOut" }}
+          className={`h-full ${color.replace('text-', 'bg-')} shadow-[0_0_10px_currentColor]`}
+          style={{ boxShadow: `0 0 8px ${color.includes('green') ? '#22c55e' : color.includes('blue') ? '#3b82f6' : '#ef4444'}` }}
+        />
+      </div>
     </div>
   );
 }
