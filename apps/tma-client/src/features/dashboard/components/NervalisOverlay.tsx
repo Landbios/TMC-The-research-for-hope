@@ -66,17 +66,23 @@ export function NervalisOverlay() {
     }
   }, [activeTab, isOpen]);
 
-  // Reset position if it's potentially outside bounds (e.g. after resize or weird drag)
+  // Reset position if it's potentially outside bounds
   useEffect(() => {
-    if (isOpen) {
-      const isTooFarLeft = terminalPosition.x < -window.innerWidth;
-      const isTooFarRight = terminalPosition.x > 100; // Small buffer for right-anchored
+    const checkBounds = () => {
+      const isTooFarLeft = terminalPosition.x < -window.innerWidth + 100;
+      const isTooFarRight = terminalPosition.x > 100; 
       const isTooFarUp = terminalPosition.y < -100;
-      const isTooFarDown = terminalPosition.y > window.innerHeight;
+      const isTooFarDown = terminalPosition.y > window.innerHeight - 100;
 
       if (isTooFarLeft || isTooFarRight || isTooFarUp || isTooFarDown) {
         setTerminalPosition({ x: 0, y: 0 });
       }
+    };
+
+    if (isOpen) {
+      checkBounds();
+      window.addEventListener('resize', checkBounds);
+      return () => window.removeEventListener('resize', checkBounds);
     }
   }, [isOpen, terminalPosition, setTerminalPosition]);
 

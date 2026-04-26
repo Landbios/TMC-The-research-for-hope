@@ -148,7 +148,15 @@ export function InsideRoomArena() {
     checkRoomEntry();
   }, [roomId, myCharacterId, isStealthing, userRole, router, isAssassin]);
 
-  // 3. Efecto de Suscripciones en Tiempo Real (Estable)
+  // 3. Efecto de Sincronización de Evidencias (Trigger Global)
+  const refreshCluesTrigger = useTmaStore(state => state.refreshCluesTrigger);
+  useEffect(() => {
+    if (roomId && roomId !== 'UNKNOWN_SECTOR') {
+      getRoomClues(roomId).then(setClues);
+    }
+  }, [roomId, refreshCluesTrigger]);
+
+  // 4. Efecto de Suscripciones en Tiempo Real (Estable)
   useEffect(() => {
     if (!roomId || roomId === 'UNKNOWN_SECTOR') return;
     

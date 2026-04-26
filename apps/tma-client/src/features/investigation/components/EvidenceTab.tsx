@@ -80,6 +80,8 @@ function PollCard({ activePoll, myCharacterId, totalStudents }: { activePoll: TM
   const isRejected = activePoll.no_count >= majority || (activePoll.yes_count + activePoll.no_count >= totalStudents && !isAccepted);
   const canResolve = isAccepted || isRejected || (activePoll.yes_count + activePoll.no_count >= totalStudents);
 
+  const triggerClueRefresh = useTmaStore(state => state.triggerClueRefresh);
+
   const handleResolve = async () => {
     if (isResolving) return;
 
@@ -96,6 +98,9 @@ function PollCard({ activePoll, myCharacterId, totalStudents }: { activePoll: TM
         activePoll.initiator_id, 
         activePoll.evidence_id
       );
+      
+      // Force global refresh of world items
+      triggerClueRefresh();
     } catch (error) {
       console.error('Error resolving poll:', error);
     } finally {

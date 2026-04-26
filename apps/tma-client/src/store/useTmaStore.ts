@@ -49,6 +49,7 @@ interface TmaStoreState {
   isNervalisOpen: boolean;
   hasUnreadSignals: boolean;
   terminalPosition: { x: number; y: number };
+  refreshCluesTrigger: number;
 
   // Investigation & Privacy Polls
   pendingPolls: TMAEvidencePoll[];
@@ -71,6 +72,7 @@ interface TmaStoreState {
   toggleNervalis: (open?: boolean) => void;
   setHasUnreadSignals: (val: boolean) => void;
   setTerminalPosition: (pos: { x: number; y: number }) => void;
+  triggerClueRefresh: () => void;
   setUserRole: (role: 'roleplayer' | 'staff' | 'superadmin') => void;
   setPendingPolls: (polls: TMAEvidencePoll[] | ((prev: TMAEvidencePoll[]) => TMAEvidencePoll[])) => void;
   setActivePrivacyPoll: (poll: TMARoomPrivacyPoll | null) => void;
@@ -104,6 +106,7 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
   isNervalisOpen: false,
   hasUnreadSignals: false,
   terminalPosition: { x: 0, y: 0 },
+  refreshCluesTrigger: 0,
   pendingPolls: [],
   activePrivacyPoll: null,
 
@@ -197,6 +200,7 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
   }),
   setHasUnreadSignals: (val) => set({ hasUnreadSignals: val }),
   setTerminalPosition: (pos) => set({ terminalPosition: pos }),
+  triggerClueRefresh: () => set((state) => ({ refreshCluesTrigger: state.refreshCluesTrigger + 1 })),
   setUserRole: (role) => set({ userRole: role }),
   setPendingPolls: (updater) => set((state) => ({ 
     pendingPolls: typeof updater === 'function' ? updater(state.pendingPolls) : updater 
