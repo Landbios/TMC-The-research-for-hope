@@ -384,14 +384,37 @@ export async function finalizeAssassination(coordinationRoomId: string, characte
     .ilike('content', '[SISTEMA - ACCIÓN DE TIENDA]%')
     .order('created_at', { ascending: true });
 
-  const actionsLog = messages?.map(m => m.content).join('\n') || 'No se registraron acciones específicas.';
+  const actionsLog = messages?.map(m => m.content).join('\n') || 'No se registraron acciones de sistema.';
 
-  // 2. Simulación de Gemini para el resumen del caso
-  // En un entorno de producción, aquí se llamaría a una Edge Function que use el SDK de Google AI
-  const summary = `INFORME FINAL DE COORDINACIÓN - SCION\n\n` +
-    `EVALUACIÓN TÁCTICA: El sujeto ha completado la fase de preparación. \n` +
-    `ACCIONES CLAVE DETECTADAS:\n${actionsLog}\n\n` +
-    `ESTADO: Las contramedidas digitales están activas. El personal de la academia ha sido notificado del "Mantenimiento" en la zona objetivo.`;
+  // 1b. Obtener logs de CONVERSACIÓN para que Gemini tenga contexto real de lo hablado
+  const { data: chatMessages } = await supabase
+    .from('tma_messages')
+    .select('content, sender_tma_id')
+    .eq('tma_room_id', coordinationRoomId)
+    .eq('is_system_message', false)
+    .order('created_at', { ascending: true });
+
+  const conversationLog = chatMessages?.map(m => `[ID:${m.sender_tma_id}]: ${m.content}`).join('\n') || 'No hubo conversación detectada.';
+
+  // 2. Llamada real a Gemini a través de nuestra API route
+  let summary = '';
+  try {
+    const response = await fetch('/api/ai/case-builder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actionsLog, conversationLog })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      summary = data.summary;
+    } else {
+      throw new Error('AI_API_ERROR');
+    }
+  } catch (err) {
+    console.error("Fallo al generar resumen con AI:", err);
+    summary = `INFORME FINAL DE COORDINACIÓN - SCION\n\n[ERROR_EN_PROCESAMIENTO_NEURAL]\n\nACCIONES DETECTADAS:\n${actionsLog}`;
+  }
 
   // 3. Actualizar la sala: Fase FINISHED y guardar resumen
   const { error } = await supabase
@@ -429,6 +452,21 @@ export async function reopenCrimeScene(coordinationRoomId: string) {
 }
 
 /**
+ * Borra todos los mensajes de una sala específica.
+ * Útil para limpiar la sala de coordinación de asesinato.
+ */
+export async function clearRoomMessages(roomId: string) {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('tma_messages')
+    .delete()
+    .eq('tma_room_id', roomId);
+
+  if (error) throw error;
+  return true;
+}
+
+/**
  * Resetea completamente el caso actual para permitir uno nuevo.
  */
 export async function resolveCurrentCase(coordinationRoomId: string) {
@@ -445,6 +483,14 @@ export async function resolveCurrentCase(coordinationRoomId: string) {
     .eq('id', coordinationRoomId);
 
   if (roomError) throw roomError;
+
+  // 1b. Borrar todos los mensajes de la sala de coordinación para que Gemini empiece de cero
+  const { error: msgError } = await supabase
+    .from('tma_messages')
+    .delete()
+    .eq('tma_room_id', coordinationRoomId);
+
+  if (msgError) console.error('Error al limpiar mensajes de coordinación:', msgError);
 
   // 2. Resetear roles de asesino en personajes (Limpiar asesinos anteriores)
   const { error: charError } = await supabase

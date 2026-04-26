@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: Nervalis 2.0 Overhaul
-status: complete
-stopped_at: Milestone v1.0 Complete
-last_updated: "2026-04-26T22:17:00.000Z"
+milestone: v2.0
+milestone_name: Beta Readiness & Tactical Polish
+status: ready-to-plan
+stopped_at: Completed Phase 07 (Intelligence Integration)
+last_updated: "2026-04-26T23:02:00.000Z"
 last_activity: 2026-04-26
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 5
-  completed_plans: 5
-  percent: 100
+  total_phases: 3
+  completed_phases: 2
+  total_plans: 2
+  completed_plans: 2
+  percent: 66
 ---
 
 # Project State

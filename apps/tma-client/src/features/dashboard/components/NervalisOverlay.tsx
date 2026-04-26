@@ -4,10 +4,18 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTmaStore } from '@/store/useTmaStore';
 import { 
-  X, FileText, Users, Settings, Cpu, 
-  Terminal, Activity, Globe, Monitor,
-  MessageSquare, User, Shield, ShieldAlert,
-  Search, Heart, Zap, Target
+  X, FileText, Users, Settings, 
+  Terminal, 
+  User, 
+  Activity,
+  Zap,
+  Cpu,
+  MessageSquare,
+  Globe,
+  Monitor,
+  Heart,
+  Target,
+  Search
 } from 'lucide-react';
 import { VerticalChatLog } from './VerticalChatLog';
 import { EvidenceTab } from '@/features/investigation/components/EvidenceTab';
@@ -149,7 +157,7 @@ export function NervalisOverlay() {
                   <NavButton 
                     active={activeTab === 'SELF'} 
                     icon={<User size={20} />} 
-                    label="SELF" 
+                    label="NERVALIS" 
                     onClick={() => setActiveTab('SELF')} 
                   />
                   <NavButton 
@@ -581,7 +589,7 @@ function Loader() {
   );
 }
 
-function StatusBar({ label, value, max, color, icon: Icon }: { label: string, value: number, max: number, color: string, icon: any }) {
+function StatusBar({ label, value, max, color, icon: Icon }: { label: string, value: number, max: number, color: string, icon: React.ComponentType<{ size?: number; className?: string }> }) {
   const percentage = Math.min(100, Math.max(0, (value / max) * 100));
   return (
     <div className="w-full space-y-1">

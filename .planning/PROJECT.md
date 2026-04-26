@@ -31,7 +31,10 @@ A web-based (Next.js/React) social investigation game set in a high-tech academy
 - ✓ **System Hardening**: Resolved identity-switching race conditions and poll modal persistence. — Phase 5
 
 ### Active
-- [x] All core Nervalis 2.0 requirements finalized.
+- [ ] **Assassination Poll Scoping**: Ensure the poll appears for Roleplayers and non-possessing Staff.
+- [ ] **Gemini AI Case Builder**: Integrate real Gemini API to summarize murder planning stages based on actual room logs.
+- [ ] **UI Visibility Rules**: Restrict NPC Selector to Map and Nervalis views; hide in rooms.
+- [ ] **Beta Stabilization**: Final audit of vital systems (IP, MP, Privacy) for public testing.
 
 ### Out of Scope
 - **3D Fast Travel**: No procedural movement between rooms; navigation remains list-based for efficiency.

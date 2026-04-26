@@ -13,7 +13,7 @@ import {
   resetAllInvestigationPoints, 
   updateAssassinPollStatus, 
   selectRandomAssassin,
-  ensureMurderRoom
+  clearRoomMessages
 } from '../api';
 import { getGameState } from '@/features/characters/api';
 import type { TMACharacterData } from '@/features/characters/api';
@@ -129,6 +129,20 @@ export function AdminDashboard({ userRole }: AdminDashboardProps) {
       setIsLoading(false);
     }
   };
+  const handleClearLogs = async () => {
+    if (!currentCase) return;
+    if (!confirm('¿Seguro que quieres BORRAR permanentemente todos los logs de esta sala? Esto reseteará el contexto de Gemini para el próximo informe.')) return;
+    setIsLoading(true);
+    try {
+      await clearRoomMessages(currentCase.id);
+      toast.success('LOGS DE COORDINACIÓN ELIMINADOS.');
+      loadCaseData();
+    } catch (e) {
+      toast.error('Error al limpiar logs: ' + e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleResetPoints = async () => {
     if (!confirm('¿Seguro que quieres resetear los puntos de investigación de todos?')) return;
@@ -201,19 +215,6 @@ export function AdminDashboard({ userRole }: AdminDashboardProps) {
     }
   };
 
-  const handleInitializeCoordination = async () => {
-    setIsLoading(true);
-    try {
-      await ensureMurderRoom();
-      toast.success('HABITACIÓN DE COORDINACIÓN INICIALIZADA.', {
-        description: 'La sala invisible ha sido creada o verificada.'
-      });
-    } catch (e) {
-      toast.error('Error al inicializar sala: ' + e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className="flex flex-col w-full max-w-7xl mx-auto h-full animate-fade-in relative pt-4 text-(--glow)">
@@ -312,17 +313,27 @@ export function AdminDashboard({ userRole }: AdminDashboardProps) {
                                 {currentCase.murder_case_summary || 'Generando informe de clausura...'}
                              </div>
                           </div>
-                          <div className="flex flex-col gap-2">
-                             <label className="text-[10px] uppercase font-bold text-red-500">Log de Acciones del Sujeto:</label>
-                             <div className="bg-black/60 border border-red-500/20 p-4 font-mono text-[9px] max-h-[150px] overflow-y-auto space-y-2 text-zinc-400 custom-scrollbar">
-                                {caseLogs.length > 0 ? (
-                                   caseLogs.map((log, i) => <div key={i} className="border-l-2 border-red-900 pl-2">{log}</div>)
-                                ) : (
-                                   <p className="italic opacity-30">No se han registrado acciones tácticas.</p>
-                                )}
-                             </div>
-                          </div>
-                       </div>
+                           <div className="flex flex-col gap-2">
+                              <label className="text-[10px] uppercase font-bold text-red-500">Log de Acciones del Sujeto:</label>
+                              <div className="bg-black/60 border border-red-500/20 p-4 font-mono text-[9px] max-h-[150px] overflow-y-auto space-y-2 text-zinc-400 custom-scrollbar">
+                                 {caseLogs.length > 0 ? (
+                                    caseLogs.map((log, i) => <div key={i} className="border-l-2 border-red-900 pl-2">{log}</div>)
+                                 ) : (
+                                    <p className="italic opacity-30">No se han registrado acciones tácticas.</p>
+                                 )}
+                              </div>
+                           </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                           <button 
+                             onClick={handleClearLogs}
+                             disabled={isLoading}
+                             className="px-4 py-1.5 border border-red-500/30 text-red-500/60 font-mono text-[9px] uppercase hover:bg-red-500/10 hover:text-red-500 transition-all flex items-center gap-2"
+                           >
+                             <Database size={12} /> LIMPIAR REGISTRO DE DISCUSIÓN (RESET GEMINI)
+                           </button>
+                        </div>
 
                         <div className="border-t border-red-500/20 pt-6 flex flex-col gap-4">
                            <button 
@@ -416,14 +427,6 @@ export function AdminDashboard({ userRole }: AdminDashboardProps) {
                          >
                             RESET PUNTAJE DE INVESTIGACIÓN Y ASESINATO
                          </button>
-                         
-                         <button 
-                           disabled={isLoading}
-                           onClick={handleInitializeCoordination}
-                           className="w-full py-3 bg-zinc-900 text-zinc-400 border border-zinc-700 font-mono text-xs uppercase hover:bg-zinc-800 hover:text-white transition-all"
-                         >
-                            INICIALIZAR SALA DE COORDINACIÓN (HIDDEN)
-                         </button>
                        </div>
                        <p className="mt-2 font-mono text-[9px] opacity-40 mb-6">
                           Configuración de parámetros globales y salas de sistema.
@@ -465,7 +468,7 @@ export function AdminDashboard({ userRole }: AdminDashboardProps) {
            </div>
 
            <Link href="/dashboard" className="sci-border p-4 hover:bg-white/5 transition-all flex items-center justify-center gap-3 text-xs font-mono uppercase tracking-[0.2em] border-white/20">
-              &lt;&lt; REGRESAR AL DASHBOARD
+              &lt;&lt; REGRESAR A NERVALIS
            </Link>
         </div>
 

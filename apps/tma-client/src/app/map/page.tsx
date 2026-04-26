@@ -24,9 +24,9 @@ export default async function MapPage() {
       
       {/* Botón de retroceso al Dashboard */}
       <div className="absolute top-4 left-4 z-50">
-        <Link href="/dashboard" className="px-5 py-2.5 border-[1.5px] border-(--glow) bg-black/70 backdrop-blur-md hover:bg-(--glow) hover:text-black transition-all font-mono text-xs md:text-sm uppercase tracking-widest flex items-center gap-2 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+        <Link href="/dashboard" className="px-5 py-2.5 border-[1.5px] border-(--glow) bg-black/70 backdrop-blur-md hover:bg-(--glow) hover:text-black transition-all font-mono text-xs md:text-sm uppercase tracking-widest flex items-center gap-2 shadow-[0_0_15px_rgba(59,130,246,0.3)] cursor-pointer">
            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M15 19l-7-7 7-7"/></svg>
-          SISTEMA CENTRAL
+          DASHBOARD
         </Link>
       </div>
 

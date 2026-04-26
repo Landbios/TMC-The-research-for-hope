@@ -4,9 +4,7 @@ import Link from 'next/link';
 import { GlobalTmaRegistry } from '@/components/GlobalTmaRegistry';
 import { UserDashboardView } from '@/features/dashboard/components/UserDashboardView';
 import { AdminDashboardView } from '@/features/dashboard/components/AdminDashboardView';
-import { NervalisOverlay } from '@/features/dashboard/components/NervalisOverlay';
 import { getAllTMACharacters } from '@/features/characters/api';
-import { NervalisAccessButton } from '@/features/dashboard/components/NervalisAccessButton';
 
 export default async function DashboardPage() {
   const character = await getTMACharacter();
@@ -46,9 +44,9 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* ACCESS BUTTON */}
+      {/* ACCESS BUTTON REMOVED PER USER REQUEST */}
       <div className="pt-8 text-center flex flex-col items-center gap-4 w-full">
-         {isAdmin ? (
+         {isAdmin && (
            <Link 
              href="/admin"
              className="px-10 py-3 bg-red-500/10 text-red-500 font-mono text-xs tracking-widest uppercase border border-red-500/50 hover:bg-red-600 hover:text-white hover:shadow-[0_0_25px_rgba(239,68,68,0.5)] transition-all flex items-center gap-2 group relative overflow-hidden"
@@ -58,8 +56,6 @@ export default async function DashboardPage() {
              <span className="relative z-10">OVERRIDE SYSTEM (MÁSTER)</span>
              <div className="absolute top-0 left-0 w-full h-px bg-red-500/50 animate-glitch-line" />
            </Link>
-         ) : (
-            <NervalisAccessButton />
          )}
       </div>
 

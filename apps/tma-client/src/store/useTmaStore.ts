@@ -37,6 +37,7 @@ interface TmaStoreState {
   userRole: 'roleplayer' | 'staff' | 'superadmin';
   isStoreInitialized: boolean;
   isHidden: boolean;
+  isPossessing: boolean;
   
   // Exploration & VN
   selectedRoomId: string | null;
@@ -97,6 +98,7 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
   userRole: 'roleplayer',
   isStoreInitialized: false,
   isHidden: false,
+  isPossessing: false,
   
   selectedRoomId: null,
   vnState: { isActive: false, speaker: null, text: null },
@@ -158,6 +160,7 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
         murderPoints: char.murder_points ?? 0,
         characterStatus: char.status ?? 'ALIVE',
         isAssassin: char.is_assassin ?? false,
+        isPossessing: true,
       });
     } else {
       localStorage.removeItem('tma_possessed_id');
@@ -173,14 +176,18 @@ export const useTmaStore = create<TmaStoreState>((set) => ({
           murderPoints: target.murder_points ?? 0,
           characterStatus: target.status ?? 'ALIVE',
           isAssassin: target.is_assassin ?? false,
+          isPossessing: false,
         };
       });
     }
   },
   
-  spendInvestigationPoints: (cost) => set((state) => ({
-    investigationPoints: Math.max(0, state.investigationPoints - cost)
-  })),
+  spendInvestigationPoints: (cost) => set((state) => {
+    const newPoints = Math.max(0, state.investigationPoints - cost);
+    // Logic for global announcement would ideally be triggered here
+    // but we'll handle the UI reaction in a component observing this value
+    return { investigationPoints: newPoints };
+  }),
 
   setSelectedRoomId: (id) => set({ selectedRoomId: id }),
   setVnState: (patch) => set((state) => ({ 

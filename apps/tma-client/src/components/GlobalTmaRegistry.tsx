@@ -8,6 +8,7 @@ import { GlobalNotificationListener } from './GlobalNotificationListener';
 import { StaffIdentitySwitcher } from '@/features/admin/components/StaffIdentitySwitcher';
 import { AssassinRevealOverlay } from '@/features/dashboard/components/AssassinRevealOverlay';
 import { NervalisOverlay } from '@/features/dashboard/components/NervalisOverlay';
+import { usePathname } from 'next/navigation';
 import type { TMACharacterData, TMAGameState } from '@/features/characters/api';
 
 interface GlobalTmaRegistryProps {
@@ -21,6 +22,9 @@ interface GlobalTmaRegistryProps {
  * synchronization and global overlays.
  */
 export function GlobalTmaRegistry({ character, gameState, userRole }: GlobalTmaRegistryProps) {
+  const pathname = usePathname();
+  const isInsideRoom = pathname.startsWith('/rooms/');
+
   return (
     <>
       <TmaStoreInitializer 
@@ -34,7 +38,7 @@ export function GlobalTmaRegistry({ character, gameState, userRole }: GlobalTmaR
       <GlobalPollOverlay />
       <AssassinRevealOverlay />
       <NervalisOverlay />
-      {(userRole === 'staff' || userRole === 'superadmin') && <StaffIdentitySwitcher />}
+      {(userRole === 'staff' || userRole === 'superadmin') && !isInsideRoom && <StaffIdentitySwitcher />}
     </>
   );
 }

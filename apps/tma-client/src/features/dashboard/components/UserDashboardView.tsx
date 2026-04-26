@@ -5,7 +5,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Battery, Skull } from 'lucide-react';
 import { DashboardHudStats } from '@/features/dashboard/components/DashboardHudStats';
-import { DashboardPistasButton } from '@/features/dashboard/components/DashboardPistasButton';
 import { AssassinShopOverlay } from '@/features/dashboard/components/AssassinShopOverlay';
 import { useTmaStore } from '@/store/useTmaStore';
 import type { TMACharacterData } from '@/features/characters/api';
@@ -16,7 +15,9 @@ interface UserDashboardViewProps {
 
 export function UserDashboardView({ character }: UserDashboardViewProps) {
   const [isShopOpen, setIsShopOpen] = useState(false);
+  const [isRulesOpen, setIsRulesOpen] = useState(false);
   const murderPoints = useTmaStore(state => state.murderPoints);
+  const toggleNervalis = useTmaStore(state => state.toggleNervalis);
   
   const finalName = character.tmc_character?.name || character.tma_name || 'UNKNOWN SUBJECT';
   const finalImageUrl = character.tmc_character?.image_url || character.image_url;
@@ -124,8 +125,8 @@ export function UserDashboardView({ character }: UserDashboardViewProps) {
            </div>
 
            <div className="grid grid-cols-2 grid-rows-2 gap-3 flex-1 h-full">
-             <button className="sci-border p-2 flex flex-col hover:bg-(--glow)/5 transition-colors group h-full">
-               <span className="font-mono text-[9px] opacity-80 mb-2"> [ DASHBOARD ] </span>
+            <button onClick={() => toggleNervalis(true)} className="sci-border p-2 flex flex-col hover:bg-(--glow)/5 transition-colors group h-full">
+               <span className="font-mono text-[9px] opacity-80 mb-2"> [ NERVALIS ] </span>
                <div className="flex-1 border-b border-l border-(--glow)/30 flex items-end p-1">
                   <svg className="w-full h-full stroke-(--glow) opacity-60" viewBox="0 0 100 50" preserveAspectRatio="none" fill="none">
                     <path d="M0,45 L10,35 L20,40 L30,20 L40,25 L50,10 L60,15 L70,5 L80,25 L90,15 L100,20" strokeWidth="1.5" />
@@ -137,7 +138,7 @@ export function UserDashboardView({ character }: UserDashboardViewProps) {
              </button>
 
              <Link href="/map" className="sci-border p-2 flex flex-col items-center justify-center hover:bg-(--glow)/5 transition-colors group h-full">
-               <span className="font-mono text-[9px] opacity-80 self-start"> [ MAPA 3D ] </span>
+               <span className="font-mono text-[9px] opacity-80 self-start"> [ MAPA ] </span>
                <div className="w-12 h-12 rounded-full border border-(--glow)/40 relative mt-2 shadow-[inset_0_0_10px_rgba(59,130,246,0.3)]">
                  <div className="absolute inset-0 border border-(--glow)/20 rounded-full rotate-45 scale-y-50" />
                  <div className="absolute inset-x-0 top-1/2 h-px bg-(--glow)/50" />
@@ -154,13 +155,24 @@ export function UserDashboardView({ character }: UserDashboardViewProps) {
                   <span className="font-mono text-[8px] text-red-500/70 mt-1 uppercase">Protocolo Blackout</span>
                 </button>
               ) : (
-                <button className="sci-border p-2 flex flex-col items-center justify-center hover:bg-(--glow)/5 group h-full">
+                <button 
+                  onClick={() => setIsRulesOpen(true)}
+                  className="sci-border p-2 flex flex-col items-center justify-center hover:bg-(--glow)/5 group h-full transition-all hover:border-white/50"
+                >
                   <span className="font-mono text-[9px] opacity-80 self-start"> [ REGLAMENTO ] </span>
-                  <div className="w-8 h-10 border border-(--glow) mt-2 relative" />
+                  <div className="w-8 h-10 border border-(--glow) mt-2 relative overflow-hidden">
+                     <div className="absolute inset-0 bg-(--glow)/10 animate-pulse" />
+                     <div className="w-full h-px bg-(--glow)/30 mt-2" />
+                     <div className="w-2/3 h-px bg-(--glow)/30 mt-1 ml-1" />
+                     <div className="w-3/4 h-px bg-(--glow)/30 mt-1 ml-1" />
+                  </div>
                 </button>
               )}
 
-             <DashboardPistasButton />
+             {/* Pistas removed per user request */}
+             <div className="sci-border p-2 flex flex-col items-center justify-center opacity-10 grayscale">
+                <span className="font-mono text-[9px] self-start opacity-30"> [ N/A ] </span>
+             </div>
            </div>
         </div>
       </div>
@@ -173,6 +185,62 @@ export function UserDashboardView({ character }: UserDashboardViewProps) {
       </div>
 
       {isShopOpen && <AssassinShopOverlay onClose={() => setIsShopOpen(false)} />}
+      
+      {/* REGLAMENTO MODAL */}
+      {isRulesOpen && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in">
+           <div className="relative w-full max-w-2xl bg-black border-2 border-blue-500/50 shadow-[0_0_50px_rgba(59,130,246,0.3)] flex flex-col max-h-[80vh]">
+              <div className="bg-blue-600 text-black p-2 font-mono font-bold text-center uppercase tracking-[0.4em] text-xs shrink-0">
+                ！！！ academy regulations override ！！！
+              </div>
+              
+              <div className="p-6 md:p-10 overflow-y-auto custom-scrollbar flex-1">
+                 <div className="space-y-8 font-mono">
+                    <div className="border-l-4 border-blue-600 pl-6 py-2">
+                       <h2 className="text-2xl text-white uppercase tracking-tighter">REGLAS DE LA ACADEMIA</h2>
+                       <p className="text-[10px] text-blue-500 opacity-60">SISTEMA_LOG: DANGANRONPA_PROTOCOL_ACTIVE</p>
+                    </div>
+
+                    <div className="space-y-6 text-sm leading-relaxed">
+                       <div className="flex gap-4">
+                          <span className="text-blue-500 font-bold shrink-0">01.</span>
+                          <p className="text-zinc-300">Los estudiantes vivirán en la Academia por tiempo indefinido. La única forma de graduarse es cometer un asesinato exitoso sin ser descubierto.</p>
+                       </div>
+                       <div className="flex gap-4">
+                          <span className="text-blue-500 font-bold shrink-0">02.</span>
+                          <p className="text-zinc-300">Una vez que un cuerpo es descubierto por tres o más personas, se llevará a cabo una investigación seguida de un Juicio Escolar.</p>
+                       </div>
+                       <div className="flex gap-4">
+                          <span className="text-blue-500 font-bold shrink-0">03.</span>
+                          <p className="text-zinc-300">Si el asesino (el &quot;culpable&quot;) es identificado correctamente durante el juicio, solo él será ejecutado.</p>
+                       </div>
+                       <div className="flex gap-4">
+                          <span className="text-blue-500 font-bold shrink-0">04.</span>
+                          <p className="text-zinc-300">Si los estudiantes fallan al identificar al culpable, todos los inocentes serán ejecutados y el asesino será libre de graduarse.</p>
+                       </div>
+                       <div className="flex gap-4">
+                          <span className="text-blue-500 font-bold shrink-0">05.</span>
+                          <p className="text-zinc-300">Cualquier daño a las cámaras de seguridad o monitores será severamente castigado por el sistema.</p>
+                       </div>
+                    </div>
+
+                    <div className="pt-8 border-t border-blue-500/20 text-center">
+                       <p className="text-[10px] text-blue-500/50 uppercase tracking-widest italic animate-pulse">
+                         &quot;La esperanza es solo el primer paso hacia la desesperación...&quot;
+                       </p>
+                    </div>
+                 </div>
+              </div>
+
+              <button 
+                onClick={() => setIsRulesOpen(false)}
+                className="w-full py-4 bg-zinc-900 border-t border-blue-500/30 text-blue-400 font-mono text-xs uppercase hover:bg-white hover:text-black transition-all tracking-[0.5em]"
+              >
+                [ CERRAR REGISTRO ]
+              </button>
+           </div>
+        </div>
+      )}
     </div>
   );
 }
