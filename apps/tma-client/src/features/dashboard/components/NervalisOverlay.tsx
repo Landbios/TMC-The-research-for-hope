@@ -66,10 +66,24 @@ export function NervalisOverlay() {
     }
   }, [activeTab, isOpen]);
 
+  // Reset position if it's potentially outside bounds (e.g. after resize or weird drag)
+  useEffect(() => {
+    if (isOpen) {
+      const isTooFarLeft = terminalPosition.x < -window.innerWidth;
+      const isTooFarRight = terminalPosition.x > 100; // Small buffer for right-anchored
+      const isTooFarUp = terminalPosition.y < -100;
+      const isTooFarDown = terminalPosition.y > window.innerHeight;
+
+      if (isTooFarLeft || isTooFarRight || isTooFarUp || isTooFarDown) {
+        setTerminalPosition({ x: 0, y: 0 });
+      }
+    }
+  }, [isOpen, terminalPosition, setTerminalPosition]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-300 pointer-events-none overflow-hidden" ref={constraintsRef}>
+    <div className="fixed inset-0 z-[300] pointer-events-none overflow-hidden" ref={constraintsRef}>
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -81,8 +95,10 @@ export function NervalisOverlay() {
             dragConstraints={constraintsRef}
             dragMomentum={false}
             dragElastic={0}
+            dragListener={true}
             style={{ x: terminalPosition.x, y: terminalPosition.y }}
             onDragEnd={(_, info) => {
+               // Persist the delta movement into the global state
                setTerminalPosition({ 
                  x: terminalPosition.x + info.offset.x, 
                  y: terminalPosition.y + info.offset.y 
@@ -342,6 +358,12 @@ export function NervalisOverlay() {
                                    className="py-1 border border-red-500/40 text-red-500 text-[9px] uppercase hover:bg-red-500/10"
                                  >
                                    Bodymode_Pulse
+                                 </button>
+                                 <button 
+                                   onClick={() => { setTerminalPosition({ x: 0, y: 0 }); toast.success('POSICIÓN_RESETEADA'); }}
+                                   className="py-1 border border-zinc-500/40 text-zinc-400 text-[9px] uppercase hover:bg-zinc-500/10 col-span-2"
+                                 >
+                                   Reset_Terminal_Coords
                                  </button>
                               </div>
                            </div>

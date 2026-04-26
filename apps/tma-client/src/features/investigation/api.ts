@@ -127,10 +127,17 @@ export async function resolvePoll(pollId: string, status: 'ACCEPTED' | 'REJECTED
       });
 
     // 5. Ocultar la evidencia de la sala (QA Improvement)
-    await supabase
+    console.log(`[TMA-INVESTIGATION] OCULTANDO EVIDENCIA ${evidenceId} DE LA SALA...`);
+    const { error: hideError } = await supabase
       .from('tma_evidences')
       .update({ is_hidden: true })
       .eq('id', evidenceId);
+      
+    if (hideError) {
+      console.error(`[TMA-INVESTIGATION] ERROR AL OCULTAR EVIDENCIA:`, hideError);
+    } else {
+      console.log(`[TMA-INVESTIGATION] EVIDENCIA OCULTADA EXITOSAMENTE.`);
+    }
   }
 }
 

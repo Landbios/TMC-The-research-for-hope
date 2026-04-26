@@ -286,6 +286,24 @@ export function InsideRoomArena() {
       fetchRoomMeta();
       fetchRoomHistory();
 
+      // 5. Suscripción a Evidencias (Visibilidad)
+      const chan5 = supabase.channel(`room_evidences_${roomId}_${Date.now()}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tma_evidences', filter: `room_id=eq.${roomId}` }, (payload) => {
+           const ev = payload.new as TMAEvidence;
+           if (!ev) return;
+           if (mounted) {
+              setClues(prev => {
+                const exists = prev.find(c => c.id === ev.id);
+                if (exists) {
+                  return prev.map(c => c.id === ev.id ? { ...c, ...ev } : c);
+                }
+                return [...prev, ev];
+              });
+           }
+        });
+      chan5.subscribe();
+      channelsToClean.push(chan5);
+
       // 4. Suscripción a Mensajes (Burbujas Flotantes y VN-UI)
       const chan4 = supabase.channel(`chat_messages_${roomId}_${Date.now()}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tma_messages', filter: `tma_room_id=eq.${roomId}` }, (payload) => {
