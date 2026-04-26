@@ -62,7 +62,7 @@ export function RoomPageClient({ roomId, character, gameState, userRole }: RoomP
       <InsideRoomArena />
 
       {/* Efectos de CRT */}
-      <div className="fixed inset-0 crt-scanline pointer-events-none z-40 opacity-50 mix-blend-overlay" />
+      <div className="fixed inset-0 crt-scanline pointer-events-none z-40 opacity-20 mix-blend-overlay" />
     </div>
   );
 }

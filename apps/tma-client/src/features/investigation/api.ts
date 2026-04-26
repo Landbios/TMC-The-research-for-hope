@@ -125,6 +125,12 @@ export async function resolvePoll(pollId: string, status: 'ACCEPTED' | 'REJECTED
         character_id: initiatorId,
         evidence_id: evidenceId
       });
+
+    // 5. Ocultar la evidencia de la sala (QA Improvement)
+    await supabase
+      .from('tma_evidences')
+      .update({ is_hidden: true })
+      .eq('id', evidenceId);
   }
 }
 

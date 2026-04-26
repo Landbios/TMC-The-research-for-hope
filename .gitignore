@@ -30,6 +30,7 @@ pnpm-debug.log*
 
 # Ignore docs according to user instructions
 *.md
+!.planning/**/*.md
 
 # Ignore cloned repos according to user instructions
 /tmc-scion/

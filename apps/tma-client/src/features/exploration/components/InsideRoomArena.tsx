@@ -488,7 +488,7 @@ export function InsideRoomArena() {
               );
             })}
 
-            {clues.map((clue) => (
+            {clues.filter(c => !c.is_hidden || isEditMode).map((clue) => (
               <Suspense key={clue.id} fallback={null}>
                 <EvidenceSprite3D 
                   evidence={clue} 

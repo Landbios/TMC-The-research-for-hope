@@ -72,7 +72,8 @@ export async function resetAllInvestigationPoints() {
   const supabase = createClient();
   const { error } = await supabase
     .from('tma_characters')
-    .update({ investigation_points: 7 })
+    .update({ investigation_points: 7, murder_points: 7 })
+ 
     .eq('status', 'ALIVE');
 
   if (error) throw error;

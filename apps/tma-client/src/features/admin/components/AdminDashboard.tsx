@@ -135,7 +135,7 @@ export function AdminDashboard({ userRole }: AdminDashboardProps) {
     setIsLoading(true);
     try {
       await resetAllInvestigationPoints();
-      toast.success('Puntos reseteados a 7 para todos los estudiantes.');
+      toast.success('Puntos reseteados ');
     } catch (e) {
       toast.error('Error al resetear puntos: ' + e);
     } finally {
@@ -414,7 +414,7 @@ export function AdminDashboard({ userRole }: AdminDashboardProps) {
                            onClick={handleResetPoints}
                            className="w-full py-3 bg-red-500/10 text-red-500 border border-red-500/50 font-mono text-xs uppercase hover:bg-red-500 hover:text-white transition-all shadow-[0_0_10px_rgba(239,68,68,0.2)]"
                          >
-                            RESET PUNTAJE DE INVESTIGACIÓN (7 IP)
+                            RESET PUNTAJE DE INVESTIGACIÓN Y ASESINATO
                          </button>
                          
                          <button 

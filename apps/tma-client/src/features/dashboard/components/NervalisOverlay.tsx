@@ -31,6 +31,15 @@ export function NervalisOverlay() {
   const [selectedStudent, setSelectedStudent] = useState<TMACharacterData | null>(null);
   
   const constraintsRef = useRef(null);
+  const hasUnreadSignals = useTmaStore(state => state.hasUnreadSignals);
+  const setHasUnreadSignals = useTmaStore(state => state.setHasUnreadSignals);
+
+  // Safeguard: Clear unread signals whenever terminal is open
+  useEffect(() => {
+    if (isOpen && hasUnreadSignals) {
+      setHasUnreadSignals(false);
+    }
+  }, [isOpen, hasUnreadSignals, setHasUnreadSignals]);
 
   useEffect(() => {
     let mounted = true;

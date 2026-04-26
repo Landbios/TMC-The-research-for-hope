@@ -53,20 +53,25 @@ export function EvidenceTab() {
 function PollCard({ activePoll, myCharacterId, totalStudents }: { activePoll: TMAEvidencePoll, myCharacterId: string | null, totalStudents: number }) {
   const [hasVoted, setHasVoted] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
+  const [isVoting, setIsVoting] = useState(false);
   
   useEffect(() => {
     setHasVoted(false);
+    setIsVoting(false);
   }, [activePoll.id]);
 
   const handleVote = async (vote: boolean) => {
-    if (!myCharacterId || hasVoted) return;
+    if (!myCharacterId || hasVoted || isVoting) return;
     try {
+      setIsVoting(true);
       await submitVote(activePoll.id, myCharacterId, vote);
       setHasVoted(true);
     } catch (error) {
       console.error('Error voting:', error);
       const msg = error instanceof Error ? error.message : 'Error al registrar tu voto.';
       toast.error(msg);
+    } finally {
+      setIsVoting(false);
     }
   };
 
@@ -168,15 +173,25 @@ function PollCard({ activePoll, myCharacterId, totalStudents }: { activePoll: TM
           <div className="grid grid-cols-2 gap-4">
             <button 
               onClick={() => handleVote(true)}
-              className="py-3 bg-green-950/20 border border-green-500/50 text-green-500 font-mono text-xs uppercase hover:bg-green-500 hover:text-black transition-all"
+              disabled={isVoting}
+              className={`py-3 border font-mono text-xs uppercase transition-all ${
+                isVoting 
+                ? 'bg-zinc-900 border-zinc-700 text-zinc-600 grayscale opacity-50 cursor-not-allowed'
+                : 'bg-green-950/20 border-green-500/50 text-green-500 hover:bg-green-500 hover:text-black'
+              }`}
             >
-              [ SÍ / ACEPTAR ]
+              [ {isVoting ? 'VOTANDO...' : 'SÍ / ACEPTAR'} ]
             </button>
             <button 
               onClick={() => handleVote(false)}
-              className="py-3 bg-red-950/20 border border-red-500/50 text-red-500 font-mono text-xs uppercase hover:bg-red-500 hover:text-black transition-all"
+              disabled={isVoting}
+              className={`py-3 border font-mono text-xs uppercase transition-all ${
+                isVoting 
+                ? 'bg-zinc-900 border-zinc-700 text-zinc-600 grayscale opacity-50 cursor-not-allowed'
+                : 'bg-red-950/20 border-red-500/50 text-red-500 hover:bg-red-500 hover:text-black'
+              }`}
             >
-              [ NO / RECHAZAR ]
+              [ {isVoting ? 'VOTANDO...' : 'NO / RECHAZAR'} ]
             </button>
           </div>
         ) : (
