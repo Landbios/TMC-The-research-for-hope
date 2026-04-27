@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Repository & Architecture Improvements
 status: planning
-stopped_at: Milestone initialized; requirements and roadmap prepared
-last_updated: "2026-04-26T23:40:00.000Z"
+stopped_at: Phase 1 context gathered (flatten repository strategy locked)
+last_updated: "2026-04-26T23:50:00.000Z"
 last_activity: 2026-04-26
 progress:
   total_phases: 4
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 
 ## Current Position
 
-Phase: Not started (defining milestone work)
+Phase: 1 - Repo Operating Model
 Plan: -
-Status: Ready to discuss Phase 1
+Status: Context gathered; ready for research/planning
 Last activity: 2026-04-26 - Milestone v2.1 started
 
 Progress: [....................] 0%
