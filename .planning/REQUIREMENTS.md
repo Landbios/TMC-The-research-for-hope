@@ -1,40 +1,65 @@
-# Requirements: Milestone 2.0 - Beta Readiness & Tactical Polish
+# Requirements: Milestone v2.1 - Repository & Architecture Improvements
 
 ## Overview
-This milestone focuses on hardening the existing systems, integrating real AI summaries for the murder coordination phase, and refining UI visibility rules to prevent "out-of-character" staff tools from leaking into immersive room views.
+This milestone improves repository operability, internal architecture, deployment readiness, and low-risk performance/database boundaries for the active gameplay app in `apps/tma-client`. The goal is to reduce coupling and clarify ownership without changing the game's intended behavior.
 
-## Functional Requirements
+## Milestone Requirements
 
-### 1. Assassination Poll Visibility [BETA-01]
-- The "Blackout Protocol" (Assassination Poll) overlay must be visible to:
-  - Users with `userRole === 'roleplayer'`.
-  - Users with `userRole === 'staff'` or `userRole === 'superadmin'` **ONLY IF** they are not currently possessing an NPC (i.e., `myCharacterId === originalCharacter.id`).
-- Staff members possessing an NPC should not see the poll, as it would interfere with their NPC roleplay.
+### Repo Operations
+- [ ] **REPO-01**: Maintainers can run the active app's `dev`, `build`, `lint`, and `typecheck` workflows from the repo root using explicit workspace-aware scripts.
+- [ ] **REPO-02**: The repository documents that `apps/tma-client` is the only deployable production app for this milestone.
+- [ ] **REPO-03**: The workspace keeps `tmc-scion` and `tmc-characters-maker` available locally while excluding them from Git commits and deployment scope.
 
-### 2. Gemini AI Case Summary [BETA-02]
-- Replace the static "Simulation" text in `finalizeAssassination` with a real call to the Gemini API.
-- **Context Awareness**: The AI prompt should include:
-  - Recent room dialogue logs (from `tma_messages`).
-  - Store actions (Assassin Shop purchases/logs).
-- **Output**: A professional "Tactical Evaluation" summary that feels like an automated system report (SCION).
+### Module Boundaries
+- [ ] **ARCH-01**: Route files under `apps/tma-client/src/app` are limited to routing, auth gating, data bootstrap, and screen composition concerns.
+- [ ] **ARCH-02**: Product code is reorganized into clearer module, shared, infrastructure, and state boundaries with documented ownership rules.
+- [ ] **ARCH-03**: Global runtime components and listeners are grouped under an explicit app-shell boundary instead of generic shared component folders.
+- [ ] **ARCH-04**: Duplicated shared UI/utilities are consolidated into one canonical implementation per concern.
 
-### 3. Identity Switcher Scoping [BETA-03]
-- The NPC Selector (Diamond identity switcher) must be hidden when the user is inside a room (`/rooms/[roomId]`).
-- It should only be visible when the user is viewing the Map or the Dashboard.
-- **Rationale**: To prevent accidental identity flips during immersive roleplay sessions.
+### Data and Runtime Boundaries
+- [ ] **DATA-01**: Selected high-impact features can perform their Supabase reads and writes through dedicated repository or service modules instead of direct table access inside render-heavy components.
+- [ ] **DATA-02**: Browser, server, and middleware Supabase helpers remain separated by runtime-safe boundaries with clear import conventions.
+- [ ] **DATA-03**: Database migration and schema/type ownership is standardized to one documented process without breaking current gameplay behavior.
 
-### 4. Admin Dashboard Polish [BETA-04]
-- Ensure the Admin Dashboard correctly displays all volunteers and allows the selection of an assassin.
-- Verify that the Coordination Stage transitions (PLANNING -> PREPARATION -> EXECUTION -> FINISHED) are robust and clear.
+### Performance and Deployment
+- [ ] **PERF-01**: The milestone reduces oversized client boundaries or duplicated subscriptions/queries in at least the highest-risk gameplay surfaces touched by the refactor.
+- [ ] **DEP-01**: The app has a documented Vercel deployment contract, including app root, build path, and required environment variables.
+- [ ] **DEP-02**: The repository provides a minimum refactor-safety gate of lint, typecheck, and production build verification for the active app.
 
-## Technical Requirements
-- Implement a Server Action or Next.js Route Handler for Gemini API calls to keep the API key secure.
-- Use the `@google/generative-ai` SDK.
-- Update `GlobalPollOverlay.tsx` with refined role/possession checks.
-- Add route-based conditional rendering for the `StaffIdentitySwitcher`.
+## Future Requirements
+- [ ] **FUT-01**: Extract stable multi-consumer code into `packages/*` only after reuse is proven.
+- [ ] **FUT-02**: Revisit database schema redesign or RLS hardening in a dedicated milestone.
+- [ ] **FUT-03**: Expand smoke/integration coverage into a broader automated test strategy.
+- [ ] **FUT-04**: Reassess whether `tmc-scion` or `tmc-characters-maker` should ever become first-class workspace apps.
 
-## Verification Criteria (UAT)
-- [ ] Log in as Staff: Verify the NPC Selector is visible on the Map but hidden in rooms.
-- [ ] Log in as Staff: Ensure the Assassination Poll appears if no NPC is possessed.
-- [ ] Possess an NPC: Verify the Assassination Poll disappears.
-- [ ] Finalize a Coordination phase: Verify that a unique, AI-generated summary appears based on the actual room logs.
+## Out of Scope
+- Moving `apps/tma-client` to repo root
+- Replacing Supabase, Next.js, or Zustand
+- Rewriting gameplay loops for product changes instead of structural safety
+- Merging the reference repos into the production app
+- Large-scale schema redesign or risky cross-cutting database behavior changes
+
+## Verification Criteria
+- [ ] Root scripts and active-app deployment scope are explicit and working.
+- [ ] Architecture ownership is documented and reflected in the file layout.
+- [ ] Refactored hot paths preserve gameplay behavior while reducing coupling.
+- [ ] Deployment documentation and environment expectations are clear enough for Vercel setup.
+- [ ] Lint, typecheck, and production build verification cover the active app.
+
+## Traceability
+
+| Requirement | Phase |
+|-------------|-------|
+| REPO-01 | Phase 1 |
+| REPO-02 | Phase 1 |
+| REPO-03 | Phase 1 |
+| ARCH-01 | Phase 2 |
+| ARCH-02 | Phase 2 |
+| ARCH-03 | Phase 2 |
+| ARCH-04 | Phase 2 |
+| DATA-01 | Phase 3 |
+| DATA-02 | Phase 3 |
+| DATA-03 | Phase 3 |
+| PERF-01 | Phase 4 |
+| DEP-01 | Phase 4 |
+| DEP-02 | Phase 4 |
