@@ -32,6 +32,5 @@ pnpm-debug.log*
 *.md
 !.planning/**/*.md
 
-# Ignore cloned repos according to user instructions
-/tmc-scion/
-/tmc-characters-maker/
+# Ignore reference tools
+/reference/
