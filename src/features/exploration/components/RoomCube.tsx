@@ -1,33 +1,75 @@
 'use client';
 
 import * as THREE from 'three';
-import { Suspense } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { RoomModel } from './RoomModel';
-
-// Mapa estático local temporal para pruebas de Fase 1
-// Esto mapea UUIDs o identificadores de sala con archivos .glb en el directorio público
-const LOCAL_MODEL_MAP: Record<string, { url: string; scale: number; position: [number, number, number] }> = {
-  'coordinacion': { url: '/models/coordinacion.glb', scale: 1.0, position: [0, 0, 0] },
-  'biblioteca': { url: '/models/biblioteca.glb', scale: 1.0, position: [0, 0, 0] },
-  'test-room': { url: '/models/test_room.glb', scale: 1.0, position: [0, 0, 0] }
-};
+import { createClient } from '@/lib/supabase/client';
 
 export function RoomCube() {
   const params = useParams();
   const roomId = params?.roomId as string;
+  const [modelConfig, setModelConfig] = useState<{ url: string; scale: number; position: [number, number, number] } | null>(null);
 
-  // Buscar si el ID de sala actual o subcadena tiene un modelo mapeado localmente
-  const key = roomId ? Object.keys(LOCAL_MODEL_MAP).find(k => roomId.toLowerCase().includes(k)) : undefined;
-  const config = key ? LOCAL_MODEL_MAP[key] : null;
+  // Sincronización síncrona en render cuando cambia roomId, evitando set-state-in-effect redundantes
+  const [prevRoomId, setPrevRoomId] = useState<string | null>(null);
+  if (roomId !== prevRoomId) {
+    setPrevRoomId(roomId);
+    setModelConfig(null);
+  }
 
-  if (config) {
+  useEffect(() => {
+    if (!roomId) return;
+
+    const supabase = createClient();
+    const fetchRoomModel = async () => {
+      try {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(roomId);
+        let query = supabase.from('tma_rooms').select('model_url, model_scale, model_offset_y');
+
+        if (isUuid) {
+          query = query.eq('id', roomId);
+        } else {
+          query = query.ilike('name', `%${roomId}%`);
+        }
+
+        const { data, error } = await query.maybeSingle();
+
+        if (error) {
+          console.error('[TMA-ROOMCUBE] Error fetching room model:', error);
+          setModelConfig(null);
+          return;
+        }
+
+        if (data && data.model_url) {
+          const formattedUrl = data.model_url.startsWith('/') || data.model_url.startsWith('http')
+            ? data.model_url
+            : `/models/${data.model_url}`;
+
+          setModelConfig({
+            url: formattedUrl,
+            scale: Number(data.model_scale ?? 1.0),
+            position: [0, Number(data.model_offset_y ?? 0.0), 0]
+          });
+        } else {
+          setModelConfig(null);
+        }
+      } catch (err) {
+        console.error('[TMA-ROOMCUBE] Unexpected error fetching room model:', err);
+        setModelConfig(null);
+      }
+    };
+
+    fetchRoomModel();
+  }, [roomId]);
+
+  if (modelConfig) {
     return (
       <Suspense fallback={<FallbackLoadingBox />}>
         <RoomModel 
-          url={config.url} 
-          scale={config.scale} 
-          position={config.position} 
+          url={modelConfig.url} 
+          scale={modelConfig.scale} 
+          position={modelConfig.position} 
         />
       </Suspense>
     );

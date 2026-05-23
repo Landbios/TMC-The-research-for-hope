@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -944,6 +944,9 @@ export type Database = {
           is_invisible: boolean | null
           is_private: boolean
           name: string
+          model_url: string | null
+          model_scale: number
+          model_offset_y: number
         }
         Insert: {
           background_url?: string | null
@@ -953,6 +956,9 @@ export type Database = {
           is_invisible?: boolean | null
           is_private?: boolean
           name: string
+          model_url?: string | null
+          model_scale?: number
+          model_offset_y?: number
         }
         Update: {
           background_url?: string | null
@@ -962,6 +968,9 @@ export type Database = {
           is_invisible?: boolean | null
           is_private?: boolean
           name?: string
+          model_url?: string | null
+          model_scale?: number
+          model_offset_y?: number
         }
         Relationships: []
       }
