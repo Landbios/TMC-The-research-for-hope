@@ -263,8 +263,9 @@ export function InsideRoomArena() {
     };
 
     // 1. Suscripción a Personajes
-    const chan1 = supabase.channel(`room_chars_${roomId}_${Date.now()}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tma_characters' }, (payload) => {
+    const chan1 = supabase.channel(`room_chars_${roomId}_${Date.now()}`);
+    if (chan1) {
+      chan1.on('postgres_changes', { event: '*', schema: 'public', table: 'tma_characters' }, (payload) => {
          const char = payload.new as TMACharacterData | undefined;
          if (!char) return; 
 
@@ -282,12 +283,14 @@ export function InsideRoomArena() {
               setCharacters(prev => prev.filter(c => c.id !== char.id));
            }
         });
-    chan1.subscribe();
-    channelsToClean.push(chan1);
+      chan1.subscribe();
+      channelsToClean.push(chan1);
+    }
 
     // 2. Suscripción a Polls de Privacidad
-    const chan2 = supabase.channel(`privacy_polls_${roomId}_${Date.now()}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tma_room_privacy_polls', filter: `room_id=eq.${roomId}` }, (payload) => {
+    const chan2 = supabase.channel(`privacy_polls_${roomId}_${Date.now()}`);
+    if (chan2) {
+      chan2.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tma_room_privacy_polls', filter: `room_id=eq.${roomId}` }, (payload) => {
          const poll = payload.new as import('@/store/useTmaStore').TMARoomPrivacyPoll;
          if (poll.status === 'PENDING' && mounted) {
             setActivePrivacyPoll(poll);
@@ -306,12 +309,14 @@ export function InsideRoomArena() {
             setActivePrivacyPoll(poll);
          }
       });
-    chan2.subscribe();
-    channelsToClean.push(chan2);
+      chan2.subscribe();
+      channelsToClean.push(chan2);
+    }
 
      // 3. Suscripción a la propia Sala (Estado de Privacidad y Fases de Coordinación)
-    const chan3 = supabase.channel(`room_meta_${roomId}_${Date.now()}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tma_rooms', filter: `id=eq.${roomId}` }, (payload) => {
+    const chan3 = supabase.channel(`room_meta_${roomId}_${Date.now()}`);
+    if (chan3) {
+      chan3.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tma_rooms', filter: `id=eq.${roomId}` }, (payload) => {
          const room = payload.new as { 
             is_private: boolean; 
             coordination_stage: 'PLANNING' | 'PREPARATION' | 'EXECUTION' | 'FINISHED'; 
@@ -327,6 +332,7 @@ export function InsideRoomArena() {
        });
     chan3.subscribe();
     channelsToClean.push(chan3);
+    }
       
       const fetchRoomHistory = async () => {
          const { data } = await supabase.from('tma_messages').select(`
@@ -360,8 +366,9 @@ export function InsideRoomArena() {
       };
 
       // 5. Suscripción a Evidencias (Visibilidad)
-      const chan5 = supabase.channel(`room_evidences_${roomId}_${Date.now()}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'tma_evidences', filter: `room_id=eq.${roomId}` }, (payload) => {
+      const chan5 = supabase.channel(`room_evidences_${roomId}_${Date.now()}`);
+      if (chan5) {
+        chan5.on('postgres_changes', { event: '*', schema: 'public', table: 'tma_evidences', filter: `room_id=eq.${roomId}` }, (payload) => {
            const ev = payload.new as TMAEvidence;
            if (!ev) return;
            if (mounted) {
@@ -374,12 +381,14 @@ export function InsideRoomArena() {
               });
            }
         });
-      chan5.subscribe();
-      channelsToClean.push(chan5);
+        chan5.subscribe();
+        channelsToClean.push(chan5);
+      }
 
       // 4. Suscripción a Mensajes (Burbujas Flotantes y VN-UI)
-      const chan4 = supabase.channel(`chat_messages_${roomId}_${Date.now()}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tma_messages', filter: `tma_room_id=eq.${roomId}` }, (payload) => {
+      const chan4 = supabase.channel(`chat_messages_${roomId}_${Date.now()}`);
+      if (chan4) {
+        chan4.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tma_messages', filter: `tma_room_id=eq.${roomId}` }, (payload) => {
            const msg = payload.new as {
               id: string;
               is_whisper: boolean;
@@ -479,6 +488,7 @@ export function InsideRoomArena() {
         });
       chan4.subscribe();
       channelsToClean.push(chan4);
+      }
 
       const init = async () => {
          await fetchChars();

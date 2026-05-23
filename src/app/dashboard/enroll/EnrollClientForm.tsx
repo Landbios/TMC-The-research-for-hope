@@ -47,15 +47,20 @@ export default function EnrollClientForm({ vaultCharacters }: Props) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('NO AUTH SESSION.');
 
+      // Extraer nombre e imagen del vault
+      const selectedData = vaultCharacters.find(c => c.id === selectedCharacter);
+
       // INSERT directamente en tma_characters ligando el ID del personaje viejo
       const { error } = await supabase
         .from('tma_characters')
         .insert({
           user_id: user.id,
           tmc_character_id: selectedCharacter,
+          tma_name: selectedData?.name || null,
+          image_url: selectedData?.image_url || null,
           tma_title: tmaTitle,
           tma_biography: tmaBiography,
-          sprite_idle_url: spriteIdle || undefined,
+          sprite_idle_url: spriteIdle || selectedData?.image_url || undefined,
         });
 
       if (error) throw error;

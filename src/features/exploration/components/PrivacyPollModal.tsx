@@ -42,10 +42,8 @@ export function PrivacyPollModal({ embedded = false }: { embedded?: boolean }) {
     }
   }, [activePrivacyPoll, setActivePrivacyPoll]);
 
-  if (!activePrivacyPoll || !myCharacterId || activePrivacyPoll.room_id !== selectedRoomId) return null;
-
   const handleVote = async (vote: boolean) => {
-    if (hasVoted) return;
+    if (hasVoted || !activePrivacyPoll || !myCharacterId) return;
     try {
       await submitPrivacyVote(activePrivacyPoll.id, myCharacterId, vote);
       setHasVoted(true);
@@ -60,12 +58,12 @@ export function PrivacyPollModal({ embedded = false }: { embedded?: boolean }) {
     }
   };
 
-  const majority = Math.floor(activePrivacyPoll.total_voters / 2) + 1;
-  const isAccepted = activePrivacyPoll.yes_count >= majority;
-  const isRejected = activePrivacyPoll.no_count >= majority || (activePrivacyPoll.yes_count + activePrivacyPoll.no_count >= activePrivacyPoll.total_voters && !isAccepted);
+  const majority = activePrivacyPoll ? Math.floor(activePrivacyPoll.total_voters / 2) + 1 : 0;
+  const isAccepted = activePrivacyPoll ? activePrivacyPoll.yes_count >= majority : false;
+  const isRejected = activePrivacyPoll ? (activePrivacyPoll.no_count >= majority || (activePrivacyPoll.yes_count + activePrivacyPoll.no_count >= activePrivacyPoll.total_voters && !isAccepted)) : false;
 
   const handleResolve = async () => {
-    if (isResolving) return;
+    if (isResolving || !activePrivacyPoll) return;
     try {
       setIsResolving(true);
       await resolvePrivacyPoll(
@@ -81,11 +79,14 @@ export function PrivacyPollModal({ embedded = false }: { embedded?: boolean }) {
   };
 
   useEffect(() => {
+    if (!activePrivacyPoll) return;
     if ((isAccepted || isRejected || timeLeft === 0) && activePrivacyPoll.initiator_id === myCharacterId && activePrivacyPoll.status === 'PENDING' && !isResolving) {
       handleResolve();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAccepted, isRejected, timeLeft, activePrivacyPoll.initiator_id, myCharacterId, activePrivacyPoll.status]);
+  }, [isAccepted, isRejected, timeLeft, activePrivacyPoll?.initiator_id, myCharacterId, activePrivacyPoll?.status]);
+
+  if (!activePrivacyPoll || !myCharacterId || activePrivacyPoll.room_id !== selectedRoomId) return null;
 
   return (
     <div className={embedded ? "w-full flex items-center justify-center p-4 bg-transparent" : "fixed inset-0 z-250 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm pointer-events-none"}>

@@ -26,51 +26,53 @@ export function PollRealtimeListener() {
     fetchPendingPolls();
 
     // Subscribe to changes in polls
-    const channel = supabase
-      .channel('tma_polls_channel')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'tma_evidence_polls' },
-        async (payload) => {
-          console.log('REALTIME POLL EVENT [INSERT]:', payload);
-          const newPoll = payload.new as TMAEvidencePoll;
-          if (newPoll.status !== 'PENDING') return;
+    const channel = supabase.channel('tma_polls_channel');
+    if (channel) {
+      channel
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'tma_evidence_polls' },
+          async (payload) => {
+            console.log('REALTIME POLL EVENT [INSERT]:', payload);
+            const newPoll = payload.new as TMAEvidencePoll;
+            if (newPoll.status !== 'PENDING') return;
 
-          const { data: evidence } = await supabase
-            .from('tma_evidences')
-            .select('*')
-            .eq('id', newPoll.evidence_id)
-            .single();
-          
-          const fullPoll = { ...newPoll, evidence };
-          setPendingPolls(prev => [...prev, fullPoll]);
-          
-          if (!useTmaStore.getState().isNervalisOpen) {
-            useTmaStore.getState().setHasUnreadSignals(true);
+            const { data: evidence } = await supabase
+              .from('tma_evidences')
+              .select('*')
+              .eq('id', newPoll.evidence_id)
+              .single();
+            
+            const fullPoll = { ...newPoll, evidence };
+            setPendingPolls(prev => [...prev, fullPoll]);
+            
+            if (!useTmaStore.getState().isNervalisOpen) {
+              useTmaStore.getState().setHasUnreadSignals(true);
+            }
           }
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'tma_evidence_polls' },
-        (payload) => {
-          console.log('REALTIME POLL EVENT [UPDATE]:', payload);
-          const updatedPoll = payload.new as TMAEvidencePoll;
-          
-          if (updatedPoll.status !== 'PENDING') {
-             // Upate counts so the UI knows it resolved
-             setPendingPolls(prev => prev.map(p => p.id === updatedPoll.id ? { ...p, ...updatedPoll } : p));
-             // Remove from pending polls after delay for feedback
-             setTimeout(() => {
-                setPendingPolls(prev => prev.filter(p => p.id !== updatedPoll.id));
-             }, 4000);
-          } else {
-             // Update counts
-             setPendingPolls(prev => prev.map(p => p.id === updatedPoll.id ? { ...p, ...updatedPoll } : p));
+        )
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'tma_evidence_polls' },
+          (payload) => {
+            console.log('REALTIME POLL EVENT [UPDATE]:', payload);
+            const updatedPoll = payload.new as TMAEvidencePoll;
+            
+            if (updatedPoll.status !== 'PENDING') {
+               // Upate counts so the UI knows it resolved
+               setPendingPolls(prev => prev.map(p => p.id === updatedPoll.id ? { ...p, ...updatedPoll } : p));
+               // Remove from pending polls after delay for feedback
+               setTimeout(() => {
+                  setPendingPolls(prev => prev.filter(p => p.id !== updatedPoll.id));
+               }, 4000);
+            } else {
+               // Update counts
+               setPendingPolls(prev => prev.map(p => p.id === updatedPoll.id ? { ...p, ...updatedPoll } : p));
+            }
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
+    }
 
     return () => {
       supabase.removeChannel(channel);

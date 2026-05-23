@@ -108,22 +108,25 @@ export function AcademyMap() {
       performMerge(roomsData, charsData);
 
       // Suscripciones Tiempo Real
-      const channel = supabase.channel('live_intel_global')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'tma_characters' }, async () => {
-            // Un update re-evalúa todo
-            const { data: newChars } = await supabase.from('tma_characters').select('*');
-            if (newChars && mounted) performMerge(roomsData, newChars);
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'tma_rooms' }, async () => {
-            const { data: newRooms } = await supabase.from('tma_rooms').select('*');
-            const { data: currentChars } = await supabase.from('tma_characters').select('*');
-            if (newRooms && currentChars && mounted) performMerge(newRooms, currentChars);
-        })
-        .subscribe();
+      const channel = supabase.channel('live_intel_global');
+      if (channel) {
+        channel
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'tma_characters' }, async () => {
+              // Un update re-evalúa todo
+              const { data: newChars } = await supabase.from('tma_characters').select('*');
+              if (newChars && mounted) performMerge(roomsData, newChars);
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'tma_rooms' }, async () => {
+              const { data: newRooms } = await supabase.from('tma_rooms').select('*');
+              const { data: currentChars } = await supabase.from('tma_characters').select('*');
+              if (newRooms && currentChars && mounted) performMerge(newRooms, currentChars);
+          })
+          .subscribe();
+      }
 
       return () => {
           mounted = false;
-          supabase.removeChannel(channel);
+          if (channel) supabase.removeChannel(channel);
       };
     };
 
