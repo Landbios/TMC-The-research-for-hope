@@ -26,13 +26,6 @@ import { Edit3, Skull } from 'lucide-react';
 
 const PLACEHOLDER_IMG_1 = 'https://picsum.photos/seed/dangan1/400/600';
 
-// Función auxiliar para esparcir personajes en la sala
-function getPositionForIndex(index: number): [number, number, number] {
-  const angle = index * (Math.PI / 4) + Math.PI; 
-  const radius = 6 + (index % 2); // Variar un poco el radio
-  return [Math.cos(angle) * radius, 0, Math.sin(angle) * radius - 2];
-}
-
 export function InsideRoomArena() {
   const isHidden = useTmaStore(state => state.isHidden);
   const params = useParams();
@@ -76,6 +69,47 @@ export function InsideRoomArena() {
   const isAssassin = useTmaStore((state) => state.isAssassin);
   
   const isNight = gamePeriod === 'NIGHTTIME';
+
+  // Algoritmo de posicionamiento libre de colisiones con pistas (distancia > 2.0)
+  const getPositionForIndex = (index: number): [number, number, number] => {
+    let angle = index * (Math.PI / 4) + Math.PI;
+    let radius = 6 + (index % 2);
+    let x = Math.cos(angle) * radius;
+    let z = Math.sin(angle) * radius - 2;
+    const y = 0;
+
+    let attempts = 0;
+    const maxAttempts = 16;
+    let hasCollision = true;
+
+    while (hasCollision && attempts < maxAttempts) {
+      hasCollision = false;
+      for (const clue of clues) {
+        if (clue.is_hidden && !isEditMode) continue;
+
+        // Distancia euclidiana tridimensional respecto a todas las coordenadas absolutas de las pistas
+        const dx = x - clue.pos_x;
+        const dz = z - clue.pos_z;
+        const dy = y - clue.pos_y;
+        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+        if (distance < 2.0) {
+          hasCollision = true;
+          break;
+        }
+      }
+
+      if (hasCollision) {
+        attempts++;
+        angle += Math.PI / 6; // Desviar el ángulo en 30 grados
+        radius += 0.5; // Incrementar un poco el radio
+        x = Math.cos(angle) * radius;
+        z = Math.sin(angle) * radius - 2;
+      }
+    }
+
+    return [x, y, z];
+  };
 
   const charactersRef = useRef<TMACharacterData[]>([]);
   useEffect(() => {

@@ -2,7 +2,7 @@
 
 import { Billboard, Image as DreiImage, Text, PivotControls } from '@react-three/drei';
 import { ThreeEvent } from '@react-three/fiber';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import * as THREE from 'three';
 import { TMAEvidence } from '@/features/investigation/api';
 import { updateEvidencePosition } from '@/features/admin/api';
@@ -19,11 +19,26 @@ export function EvidenceSprite3D({ evidence, isEditMode, onClick, onUpdate }: Ev
   const [hovered, setHovered] = useState(false);
   // Estado local para la posición. Se inicializa con los valores de la DB.
   const [pos, setPos] = useState<[number, number, number]>([evidence.pos_x, evidence.pos_y, evidence.pos_z]);
+  const [prevProps, setPrevProps] = useState({
+    id: evidence.id,
+    x: evidence.pos_x,
+    y: evidence.pos_y,
+    z: evidence.pos_z
+  });
 
-  // Sincronizar con la DB si cambian los props (ej: al cargar la sala o tras un reset)
-  useEffect(() => {
+  // Sincronización síncrona en render cuando cambian los props, evitando effects redundantes
+  if (evidence.id !== prevProps.id ||
+      evidence.pos_x !== prevProps.x ||
+      evidence.pos_y !== prevProps.y ||
+      evidence.pos_z !== prevProps.z) {
+    setPrevProps({
+      id: evidence.id,
+      x: evidence.pos_x,
+      y: evidence.pos_y,
+      z: evidence.pos_z
+    });
     setPos([evidence.pos_x, evidence.pos_y, evidence.pos_z]);
-  }, [evidence.id, evidence.pos_x, evidence.pos_y, evidence.pos_z]);
+  }
 
   const handleDrag = (local: THREE.Matrix4) => {
     // PivotControls en modo 'matrix' (sin autoTransform) nos da la matriz de transformación completa.
