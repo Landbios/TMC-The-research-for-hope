@@ -76,10 +76,16 @@ export function PrivacyPollModal({ embedded = false }: { embedded?: boolean }) {
       setActivePrivacyPoll(null);
     } catch (error) {
       console.error('Error resolving privacy poll:', error);
-    } finally {
       setIsResolving(false);
-    }
+    } 
   };
+
+  useEffect(() => {
+    if ((isAccepted || isRejected || timeLeft === 0) && activePrivacyPoll.initiator_id === myCharacterId && activePrivacyPoll.status === 'PENDING' && !isResolving) {
+      handleResolve();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAccepted, isRejected, timeLeft, activePrivacyPoll.initiator_id, myCharacterId, activePrivacyPoll.status]);
 
   return (
     <div className={embedded ? "w-full flex items-center justify-center p-4 bg-transparent" : "fixed inset-0 z-250 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm pointer-events-none"}>

@@ -103,10 +103,16 @@ function PollCard({ activePoll, myCharacterId, totalStudents }: { activePoll: TM
       triggerClueRefresh();
     } catch (error) {
       console.error('Error resolving poll:', error);
-    } finally {
       setIsResolving(false);
-    }
+    } 
   };
+
+  useEffect(() => {
+    if (canResolve && activePoll.initiator_id === myCharacterId && !isResolving && activePoll.status === 'PENDING') {
+      handleResolve();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canResolve, activePoll.initiator_id, myCharacterId, activePoll.status]);
 
   if (!activePoll.evidence) return null;
 
