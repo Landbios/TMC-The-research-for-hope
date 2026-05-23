@@ -1,10 +1,38 @@
 'use client';
 
 import * as THREE from 'three';
-import { Suspense, useState, useEffect } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { RoomModel } from './RoomModel';
 import { createClient } from '@/lib/supabase/client';
+
+class RoomModelErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('[TMA-ROOMCUBE] RoomModelErrorBoundary caught an error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <mesh>
+          <boxGeometry args={[40, 15, 40]} />
+          <meshStandardMaterial color="#1f2331" side={THREE.BackSide} roughness={0.9} />
+          <gridHelper args={[40, 40, '#000000', '#111111']} position={[0, -7.49, 0]} />
+        </mesh>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export function RoomCube() {
   const params = useParams();
@@ -65,13 +93,15 @@ export function RoomCube() {
 
   if (modelConfig) {
     return (
-      <Suspense fallback={<FallbackLoadingBox />}>
-        <RoomModel 
-          url={modelConfig.url} 
-          scale={modelConfig.scale} 
-          position={modelConfig.position} 
-        />
-      </Suspense>
+      <RoomModelErrorBoundary key={roomId}>
+        <Suspense fallback={<FallbackLoadingBox />}>
+          <RoomModel 
+            url={modelConfig.url} 
+            scale={modelConfig.scale} 
+            position={modelConfig.position} 
+          />
+        </Suspense>
+      </RoomModelErrorBoundary>
     );
   }
 

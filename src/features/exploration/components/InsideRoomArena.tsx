@@ -23,8 +23,23 @@ import { AssassinShopOverlay } from '@/features/dashboard/components/AssassinSho
 import { useRouter } from 'next/navigation';
 import { AdminEvidenceModal } from '@/features/admin/components/AdminEvidenceModal';
 import { Edit3, Skull } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useThree } from '@react-three/fiber';
 
 const PLACEHOLDER_IMG_1 = 'https://picsum.photos/seed/dangan1/400/600';
+
+function CameraResetter({ roomId }: { roomId: string }) {
+  const { camera, controls } = useThree();
+  useEffect(() => {
+    camera.position.set(0, 1.5, 0.1);
+    camera.rotation.set(0, 0, 0);
+    if (controls) {
+      (controls as any).target.set(0, 1.5, 0);
+      (controls as any).update();
+    }
+  }, [roomId, camera, controls]);
+  return null;
+}
 
 export function InsideRoomArena() {
   const isHidden = useTmaStore(state => state.isHidden);
@@ -47,6 +62,21 @@ export function InsideRoomArena() {
   const [showAssassinShop, setShowAssassinShop] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingEvidence, setEditingEvidence] = useState<TMAEvidence | null>(null);
+
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [prevRoomId, setPrevRoomId] = useState<string | null>(null);
+  
+  if (roomId !== prevRoomId) {
+    setPrevRoomId(roomId);
+    setIsTransitioning(true);
+  }
+
+  useEffect(() => {
+    if (isTransitioning) {
+      const timer = setTimeout(() => setIsTransitioning(false), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [isTransitioning]);
 
   const gamePeriod = useTmaStore((state) => state.gamePeriod);
   const vnState = useTmaStore((state) => state.vnState);
@@ -583,8 +613,27 @@ export function InsideRoomArena() {
 
   return (
     <>
+      <AnimatePresence>
+        {isTransitioning && (
+          <motion.div
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-sm pointer-events-none"
+          >
+            <div className="absolute inset-0 crt-scanline opacity-20" />
+            <div className="flex flex-col items-center gap-4 animate-pulse">
+               <div className="font-mono text-sm text-green-500 uppercase tracking-[0.3em] font-bold text-center px-6">
+                  [CONECTANDO BIOMETRÍA SECTORIAL... ESTABLECIENDO PROTOCOLO DE EXPLORACIÓN]
+               </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="w-full h-full absolute inset-0 z-0 bg-black">
         <Canvas shadows camera={{ position: [0, 1.5, 0.1], fov: 60 }}>
+          <CameraResetter roomId={roomId} />
           <color attach="background" args={['#050505']} />
           
           <ambientLight intensity={isNight ? 0.3 : 0.7} color={isNight ? '#ff3333' : '#ffffff'} />
