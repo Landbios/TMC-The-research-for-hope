@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Model addition and beta testing
 status: planning
-stopped_at: Phase 2 executed
-last_updated: "2026-05-23T17:45:00.000Z"
-last_activity: 2026-05-23 — Phase 2 executed
+stopped_at: Phase 3 context gathered
+last_updated: "2026-05-23T20:30:00.000Z"
+last_activity: 2026-05-23 — Phase 2 executed and Phase 3 context gathered
 progress:
   total_phases: 4
   completed_phases: 2
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-05-23)
 
 Phase: 3 - Fallback Engine Integration
 Plan: -
-Status: Ready to plan
-Last activity: 2026-05-23 — Phase 2 executed
+Status: Context gathered, ready to plan
+Last activity: 2026-05-23 — Phase 3 context gathered
 
 ## Performance Metrics
 
@@ -45,10 +45,10 @@ Last activity: 2026-05-23 — Phase 2 executed
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- **D-01 (Phase 2):** Host room model `.glb` assets locally under `/public/models/` for dev speed.
-- **D-02 (Phase 2):** Database columns `model_scale` defaults to `1.0` and `model_offset_y` defaults to `0.0`.
-- **D-03 (Phase 2):** TypeScript database types extended manually inside `database.types.ts` to prevent CLI churn.
-- **D-04 (Phase 2):** Database field `model_url` holds filename routes, letting the application append the folder prefixes.
+- **D-01 (Phase 3):** Wrap room 3D models with functional React class ErrorBoundaries for safe grid degradations.
+- **D-02 (Phase 3):** Enforce Framer Motion themed CRT biometric transit overlays to hide shaders compile freezes.
+- **D-03 (Phase 3):** Structure atomic cleanup arrays for useEffect in InsideRoomArena to clean all 5 Supabase channels.
+- **D-04 (Phase 3):** Reset camera and OrbitControls angles automatically to neutral front coords [0, 1.5, 0.1] on every room transits.
 
 ### Pending Todos
 
@@ -61,6 +61,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-05-23T16:57:07Z
-Stopped at: Phase 2 executed
-Resume file: .planning/phases/02-relational-schema-storage/02-SUMMARY.md
+Last session: 2026-05-23T17:42:45Z
+Stopped at: Phase 3 context gathered
+Resume file: .planning/phases/03-fallback-engine-integration/03-CONTEXT.md
