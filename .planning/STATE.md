@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Model addition and beta testing
 status: planning
-stopped_at: Phase 1 planned
-last_updated: "2026-05-23T15:41:18.282Z"
-last_activity: 2026-05-23 — Milestone v2.2 started
+stopped_at: Phase 2 context gathered
+last_updated: "2026-05-23T16:20:00.000Z"
+last_activity: 2026-05-23 — Phase 1 executed and Phase 2 context gathered
 progress:
   total_phases: 4
-  completed_phases: 0
-  total_plans: 1
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 2
+  completed_plans: 1
+  percent: 25
 ---
 
 # Project State
@@ -25,16 +25,16 @@ See: .planning/PROJECT.md (updated 2026-05-23)
 
 ## Current Position
 
-Phase: 1 - Dynamic 3D Model Visor
-Plan: 01-PLAN.md
-Status: Ready to plan
-Last activity: 2026-05-23 — Milestone v2.2 started
+Phase: 2 - Relational Schema & Storage
+Plan: -
+Status: Context gathered, ready to plan
+Last activity: 2026-05-23 — Phase 1 executed and Phase 2 context gathered
 
 ## Performance Metrics
 
 **Current milestone:**
 
-- Total plans completed: 0
+- Total plans completed: 1
 - Average duration: -
 - Total execution time: -
 
@@ -45,9 +45,10 @@ Last activity: 2026-05-23 — Milestone v2.2 started
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- **Keep `apps/tma-client` as deployable root**: Avoid repo-root churn and use Vercel Root Directory instead.
-- **Keep reference repos ignored by Git**: `tmc-scion` and `tmc-characters-maker` remain available locally but out of commit scope.
-- **Use GLB/GLTF format**: Leverage `@react-three/drei`'s `useGLTF` for high-performance dynamic 3D loading.
+- **D-01 (Phase 2):** Host room model `.glb` assets locally under `/public/models/` for dev speed.
+- **D-02 (Phase 2):** Database columns `model_scale` defaults to `1.0` and `model_offset_y` defaults to `0.0`.
+- **D-03 (Phase 2):** TypeScript database types extended manually inside `database.types.ts` to prevent CLI churn.
+- **D-04 (Phase 2):** Database field `model_url` holds filename routes, letting the application append the folder prefixes.
 
 ### Pending Todos
 
@@ -60,6 +61,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-05-23T15:41:18.275Z
-Stopped at: Phase 1 planned
-Resume file: .planning/phases/01-dynamic-3d-model-visor/01-PLAN.md
+Last session: 2026-05-23T16:13:40Z
+Stopped at: Phase 2 context gathered
+Resume file: .planning/phases/02-relational-schema-storage/02-CONTEXT.md
