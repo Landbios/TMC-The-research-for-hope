@@ -1,13 +1,12 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1
-milestone_name: Repository & Architecture Improvements
-status: executing
-stopped_at: Phase 1 execution started
-last_updated: "2026-04-27T00:15:00.000Z"
-last_activity: 2026-04-26
+milestone: v2.2
+milestone_name: Model addition and beta testing
+status: planning
+last_updated: "2026-05-23T15:27:10.687Z"
+last_activity: 2026-05-23
 progress:
-  total_phases: 4
+  total_phases: 0
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -25,12 +24,10 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 
 ## Current Position
 
-Phase: 1 - Repo Operating Model
-Plan: 01-PLAN.md
-Status: Executing Wave 1
-Last activity: 2026-04-26 - Milestone v2.1 started
-
-Progress: [....................] 0%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-23 — Milestone v2.2 started
 
 ## Performance Metrics
 

@@ -1,65 +1,54 @@
-# Requirements: Milestone v2.1 - Repository & Architecture Improvements
+# Requirements: Milestone v2.2 - Model Addition and Beta Testing
 
 ## Overview
-This milestone improves repository operability, internal architecture, deployment readiness, and low-risk performance/database boundaries for the active gameplay app in `apps/tma-client`. The goal is to reduce coupling and clarify ownership without changing the game's intended behavior.
+This milestone integrates dynamic 3D room models (.glb) into the first-person exploration engine, configures a relational schema in Supabase to link models to rooms, establishes robust fallbacks for unmodelled rooms, and resolves gameplay balance issues identified during beta testing.
 
 ## Milestone Requirements
 
-### Repo Operations
-- [ ] **REPO-01**: Maintainers can run the active app's `dev`, `build`, `lint`, and `typecheck` workflows from the repo root using explicit workspace-aware scripts.
-- [ ] **REPO-02**: The repository documents that `apps/tma-client` is the only deployable production app for this milestone.
-- [ ] **REPO-03**: The workspace keeps `tmc-scion` and `tmc-characters-maker` available locally while excluding them from Git commits and deployment scope.
+### 3D Model Integration
+- [ ] **GLB-01**: The exploration engine dynamically loads custom `.glb` / `.gltf` model files in first-person view using React Three Fiber and `@react-three/drei`'s `useGLTF`.
+- [ ] **GLB-02**: The 3D visor supports model-specific scale, position, and rotation transformations to fit room boundaries.
+- [ ] **GLB-03**: Loaded models support visual enhancement standards including shadow casting, shadow receiving, and roughness adjustments.
 
-### Module Boundaries
-- [ ] **ARCH-01**: Route files under `apps/tma-client/src/app` are limited to routing, auth gating, data bootstrap, and screen composition concerns.
-- [ ] **ARCH-02**: Product code is reorganized into clearer module, shared, infrastructure, and state boundaries with documented ownership rules.
-- [ ] **ARCH-03**: Global runtime components and listeners are grouped under an explicit app-shell boundary instead of generic shared component folders.
-- [ ] **ARCH-04**: Duplicated shared UI/utilities are consolidated into one canonical implementation per concern.
+### Database & Storage Schema
+- [ ] **DB-01**: The `tma_rooms` table includes `model_url`, `model_scale`, and `model_offset_y` database fields.
+- [ ] **DB-02**: High-performance hosting for GLB files is configured using local asset boundaries or public Supabase Storage buckets with caching.
 
-### Data and Runtime Boundaries
-- [ ] **DATA-01**: Selected high-impact features can perform their Supabase reads and writes through dedicated repository or service modules instead of direct table access inside render-heavy components.
-- [ ] **DATA-02**: Browser, server, and middleware Supabase helpers remain separated by runtime-safe boundaries with clear import conventions.
-- [ ] **DATA-03**: Database migration and schema/type ownership is standardized to one documented process without breaking current gameplay behavior.
+### Fallback Engine
+- [ ] **FALLBACK-01**: If a room lacks a valid `model_url`, the system safely falls back to the generic grid-helper `RoomCube` without breaking.
+- [ ] **FALLBACK-02**: Room changes and realtime events (chat, presence, movement) remain thread-safe and functional across different room models.
 
-### Performance and Deployment
-- [ ] **PERF-01**: The milestone reduces oversized client boundaries or duplicated subscriptions/queries in at least the highest-risk gameplay surfaces touched by the refactor.
-- [ ] **DEP-01**: The app has a documented Vercel deployment contract, including app root, build path, and required environment variables.
-- [ ] **DEP-02**: The repository provides a minimum refactor-safety gate of lint, typecheck, and production build verification for the active app.
+### Post-Beta Calibration
+- [ ] **BETA-01**: Calibrate investigation point (IP) consumption and recovery based on playtest feedback.
+- [ ] **BETA-02**: Improve vertical chat log input sizing and mobile UI scrolling bounds based on user feedback.
+- [ ] **BETA-03**: Calibrate stealth roll formulas and systemic notification sounds/visibility.
 
 ## Future Requirements
-- [ ] **FUT-01**: Extract stable multi-consumer code into `packages/*` only after reuse is proven.
-- [ ] **FUT-02**: Revisit database schema redesign or RLS hardening in a dedicated milestone.
-- [ ] **FUT-03**: Expand smoke/integration coverage into a broader automated test strategy.
-- [ ] **FUT-04**: Reassess whether `tmc-scion` or `tmc-characters-maker` should ever become first-class workspace apps.
+- [ ] **FUT-01**: Implement interactive 3D colliders for custom room models.
+- [ ] **FUT-02**: Build a visual dashboard editor for admins to place and scale models directly in-browser.
 
 ## Out of Scope
-- Moving `apps/tma-client` to repo root
-- Replacing Supabase, Next.js, or Zustand
-- Rewriting gameplay loops for product changes instead of structural safety
-- Merging the reference repos into the production app
-- Large-scale schema redesign or risky cross-cutting database behavior changes
+- Swapping the Three.js or React Three Fiber rendering engine.
+- Re-architecting core player sync or message pipelines.
+- Flat file database migration (Supabase remains the core database).
 
 ## Verification Criteria
-- [ ] Root scripts and active-app deployment scope are explicit and working.
-- [ ] Architecture ownership is documented and reflected in the file layout.
-- [ ] Refactored hot paths preserve gameplay behavior while reducing coupling.
-- [ ] Deployment documentation and environment expectations are clear enough for Vercel setup.
-- [ ] Lint, typecheck, and production build verification cover the active app.
+- [ ] GLB room models load dynamically and display correct proportions and positions.
+- [ ] Supabase room columns are fully queryable and bound to state.
+- [ ] Falling back to the grid-cube occurs gracefully without UI crashes or blank screens.
+- [ ] Post-beta patches are validated through successful playtesting of the chat, IP spending, and stealth.
 
 ## Traceability
 
 | Requirement | Phase |
 |-------------|-------|
-| REPO-01 | Phase 1 |
-| REPO-02 | Phase 1 |
-| REPO-03 | Phase 1 |
-| ARCH-01 | Phase 2 |
-| ARCH-02 | Phase 2 |
-| ARCH-03 | Phase 2 |
-| ARCH-04 | Phase 2 |
-| DATA-01 | Phase 3 |
-| DATA-02 | Phase 3 |
-| DATA-03 | Phase 3 |
-| PERF-01 | Phase 4 |
-| DEP-01 | Phase 4 |
-| DEP-02 | Phase 4 |
+| GLB-01 | Phase 1 |
+| GLB-02 | Phase 1 |
+| GLB-03 | Phase 1 |
+| DB-01 | Phase 2 |
+| DB-02 | Phase 2 |
+| FALLBACK-01 | Phase 3 |
+| FALLBACK-02 | Phase 3 |
+| BETA-01 | Phase 4 |
+| BETA-02 | Phase 4 |
+| BETA-03 | Phase 4 |

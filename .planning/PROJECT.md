@@ -7,22 +7,21 @@ To centralize the player's agency through a single, persistent "Command Center" 
 
 ## Current State
 - **Shipped Version**: v1.0 (Nervalis 2.0 Overhaul)
-- **Last Completed Milestone**: v2.0 (Beta Readiness & Tactical Polish)
-- **Status**: Planning Milestone v2.1
+- **Last Completed Milestone**: v2.1 (Repository & Architecture Improvements)
+- **Status**: Planning Milestone v2.2
 
 ## Context
 A web-based Next.js/React social investigation game set in a high-tech academy. Players explore 3D environments, interact with other students, and solve murders. The "Nervalis" terminal remains the primary interface for system-wide interactions. The active production app lives in `apps/tma-client`, while `tmc-scion` and `tmc-characters-maker` remain workspace-local reference repos that should stay ignored by Git.
 
-## Current Milestone: v2.1 Repository & Architecture Improvements
+## Current Milestone: v2.2 Model addition and beta testing
 
-**Goal:** Simplify repository operations and strengthen internal architecture without breaking live gameplay behavior.
+**Goal:** Integrate high-performance 3D room models (.glb) dynamically bound to Supabase while addressing post-beta game balance and stability.
 
 **Target features:**
-- Clarify the repo operating model around one deployable app in `apps/tma-client`.
-- Keep cloned/reference repos in the workspace while excluding them from commits and deployment scope.
-- Reorganize the app around clearer modules, shared primitives, infrastructure helpers, and single-responsibility components.
-- Reduce data-layer coupling by separating Supabase repositories/services from render-heavy UI.
-- Improve deployment readiness for Vercel, plus low-risk performance and database-boundary improvements.
+- **Carga de Modelos 3D (.glb)**: Reemplazar el cubo genérico de las salas con modelos reales en primera persona cargados de forma dinámica y asíncrona.
+- **Base de Datos Dinámica**: Agregar columnas de model_url, model_scale y model_offset_y en tma_rooms con soporte en Supabase.
+- **Fallback Seguro**: Si una sala no tiene un modelo cargado en DB, debe mostrar el RoomCube clásico con rejilla sin romper el juego.
+- **Ajustes Post-Beta**: Espacio para resolver cualquier bug o desbalance que encuentres hoy en tu testeo de la beta (ej. calibración de IP, tiempos del chat vertical o sigilo).
 
 ## Requirements
 
@@ -44,12 +43,16 @@ A web-based Next.js/React social investigation game set in a high-tech academy. 
 - ✓ **Gemini AI Case Builder**: Real AI summaries can be generated from gameplay context. - Phase 07
 - ✓ **UI Visibility Rules**: The identity switcher is scoped away from immersive room views. - Phase 06
 - ✓ **Beta Stabilization**: Tactical beta-readiness audit and final polish completed. - Phase 08
+- ✓ **Repo Operating Model**: Monorepo structure, ignored reference repos, and root script alignment completed. - Milestone v2.1
+- ✓ **Architecture Boundary Cleanup**: Domain modularity and shared components boundaries established. - Milestone v2.1
+- ✓ **Data Layer Hardening**: Separated Supabase client/server boundaries and removed direct DB coupling. - Milestone v2.1
+- ✓ **Deployment & Performance Guardrails**: Validated build system and production performance safety nets. - Milestone v2.1
 
 ### Active
-- [ ] **Repo Operating Model**: Make root scripts, ignored reference repos, and deployment scope explicit and reliable.
-- [ ] **Architecture Boundary Cleanup**: Move toward feature-first modules, app-shell separation, and single-responsibility components.
-- [ ] **Data Layer Hardening**: Reduce direct Supabase calls inside render-heavy components and standardize client/server/runtime boundaries.
-- [ ] **Deployment & Performance Guardrails**: Add Vercel-ready build conventions, validation steps, and targeted hot-path improvements.
+- [ ] **GLB-01**: Cargar dinámicamente modelos 3D (.glb) en el visor de exploración en primera persona.
+- [ ] **DB-01**: Soporte en base de datos `tma_rooms` con campos `model_url`, `model_scale` y `model_offset_y`.
+- [ ] **FALLBACK-01**: Renderizado seguro del cubo tradicional si la sala carece de modelo 3D asignado.
+- [ ] **BETA-01**: Implementar parches y calibración de jugabilidad a partir del feedback del beta test.
 
 ### Out of Scope
 - **Moving `apps/tma-client` to repo root**: Vercel can deploy from a subdirectory, so root flattening is churn without enough benefit.
@@ -88,4 +91,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state and next milestone direction
 
 ---
-*Last updated: 2026-04-26 after milestone v2.1 initialization*
+*Last updated: 2026-05-23 after milestone v2.2 initialization*
