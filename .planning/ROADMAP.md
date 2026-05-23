@@ -1,69 +1,68 @@
-# Roadmap: Milestone v2.1 - Repository & Architecture Improvements
+# Roadmap: Milestone v2.2 - Model Addition and Beta Testing
 
 ## Overview
-This milestone resets phase numbering to `Phase 1` and focuses on making the active gameplay app easier to deploy, maintain, and refactor safely. The work stays inside the current monorepo shell, keeps the reference repos local-only, and improves architecture through incremental boundary hardening rather than a big-bang rewrite.
+This roadmap outlines a 4-phase execution plan to transition the social investigation platform from abstract box arenas (`RoomCube`) to high-immersion 3D environments, including database schema extensions, safety fallbacks, and balance patches from today's beta test.
 
 ## Proposed Roadmap
 
-**4 phases** | **13 requirements mapped** | All milestone requirements covered
+**4 phases** | **10 requirements mapped** | All milestone requirements covered
 
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
-| 1 | Repo Operating Model | Clarify what the production app is, how the workspace is operated, and how reference repos stay out of the deploy surface. | REPO-01, REPO-02, REPO-03 | 4 |
-| 2 | Module Boundary Foundation | Establish canonical architecture boundaries, shared ownership rules, and low-risk file/layout consolidation. | ARCH-01, ARCH-02, ARCH-03, ARCH-04 | 4 |
-| 3 | Data and State Seams | Reduce coupling around Supabase access, store boundaries, and database process ownership without breaking gameplay behavior. | DATA-01, DATA-02, DATA-03 | 4 |
-| 4 | Deployment and Performance Hardening | Finish the milestone with Vercel-ready deployment guidance, minimum safety gates, and targeted hot-path performance cleanup. | PERF-01, DEP-01, DEP-02 | 4 |
-
-## Phase 1: Repo Operating Model
-**Goal:** Make the repository's production shape explicit and safe to operate.
-
-**Requirements:** `REPO-01`, `REPO-02`, `REPO-03`
-
-**Success criteria:**
-1. Root scripts clearly operate the active app for development, build, lint, and typecheck.
-2. The repo documents that `apps/tma-client` is the deployable app and that Vercel should target that path.
-3. `tmc-scion` and `tmc-characters-maker` remain present locally but do not enter commit or deployment scope.
-4. Legacy phase history is archived so the v2.1 roadmap can safely restart at `Phase 1`.
-
-## Phase 2: Module Boundary Foundation
-**Goal:** Create a consistent internal architecture that separates route composition, domain modules, shared primitives, infrastructure, and app-shell concerns.
-
-**Requirements:** `ARCH-01`, `ARCH-02`, `ARCH-03`, `ARCH-04`
-
-**Success criteria:**
-1. The app has a documented placement model for route files, modules, shared code, infrastructure, and state.
-2. Global runtime components/listeners are grouped under an explicit app-shell boundary.
-3. Duplicated shared UI or utilities touched by the refactor have one canonical home.
-4. Route files touched in this phase are thinner and no longer act as generic feature dumping grounds.
-
-## Phase 3: Data and State Seams
-**Goal:** Extract safer boundaries around Supabase usage, store responsibilities, and database process ownership.
-
-**Requirements:** `DATA-01`, `DATA-02`, `DATA-03`
-
-**Success criteria:**
-1. Selected hot-path features use repositories/services instead of direct Supabase calls from render-heavy components.
-2. Browser, server, and middleware Supabase helpers remain runtime-safe and clearly separated.
-3. Store refactor work preserves behavior while reducing broad cross-feature coupling.
-4. One documented database migration/type ownership path exists for the active app.
-
-## Phase 4: Deployment and Performance Hardening
-**Goal:** Make the cleaned-up app safer to ship and cheaper to evolve.
-
-**Requirements:** `PERF-01`, `DEP-01`, `DEP-02`
-
-**Success criteria:**
-1. Vercel deployment expectations are documented, including root directory and required environment variables.
-2. Lint, typecheck, and production build verification exist as the minimum refactor gate for the active app.
-3. At least one high-risk gameplay surface has reduced client-boundary or duplicate-subscription/query overhead.
-4. The milestone closes with a documented list of remaining high-risk refactor follow-ups rather than hidden churn.
-
-## Sequencing Notes
-- Keep `apps/tma-client` as the active app root for this milestone.
-- Do not move the app to repo root.
-- Prefer incremental strangler-style moves with compatibility shims where needed.
-- Treat any player-visible behavior change as explicit scope, not as an accidental side effect of cleanup.
+| 1 | Dynamic 3D Model Visor | Load custom GLB/GLTF room models inside the exploration visor. | GLB-01, GLB-02, GLB-03 | 3 |
+| 2 | Relational Schema & Storage | Configure database columns and establish secure static/cloud asset storage. | DB-01, DB-02 | 2 |
+| 3 | Fallback Engine Integration | Build robust rendering and event boundaries for unmodelled room transitions. | FALLBACK-01, FALLBACK-02 | 2 |
+| 4 | Post-Beta Calibration | Implement gameplay adjustments and mobile UI polish from the beta playtest. | BETA-01, BETA-02, BETA-03 | 3 |
 
 ---
-*Created: 2026-04-26*
-*Current Version: v2.1-planning*
+
+## Phase 1: Dynamic 3D Model Visor
+**Goal:** Enable dynamic rendering of custom GLB models in the first-person view.
+
+**Requirements:** `GLB-01`, `GLB-02`, `GLB-03`
+
+**Success criteria:**
+1. The exploration engine dynamically imports `.glb` / `.gltf` model files using React Three Fiber's `useGLTF`.
+2. Loaded 3D models support specific scale, position, and rotation configurations per room.
+3. 3D models successfully receive and cast shadows, applying customized material roughness settings.
+
+---
+
+## Phase 2: Relational Schema & Storage
+**Goal:** Extend the database schema and storage assets to support room models.
+
+**Requirements:** `DB-01`, `DB-02`
+
+**Success criteria:**
+1. The `tma_rooms` table contains queryable fields `model_url`, `model_scale`, and `model_offset_y` synced in real-time.
+2. GLB assets are successfully fetched from optimized static folders or public Supabase Storage buckets.
+
+---
+
+## Phase 3: Fallback Engine Integration
+**Goal:** Secure robust room-changing behavior and visual boundaries.
+
+**Requirements:** `FALLBACK-01`, `FALLBACK-02`
+
+**Success criteria:**
+1. Visor gracefully falls back to the generic wireframe `RoomCube` if `model_url` is absent.
+2. Room switching and realtime events function flawlessly across dynamic model and grid boundaries.
+
+---
+
+## Phase 4: Post-Beta Calibration
+**Goal:** Address balance, gameplay, and mobile UI adjustments from today's beta test.
+
+**Requirements:** `BETA-01`, `BETA-02`, `BETA-03`
+
+**Success criteria:**
+1. IP cost structures and restoration rates are tweaked to optimal gameplay flow.
+2. Sizing and bounds of the vertical chat inputs are polished for mobile viewports.
+3. Stealth roll ratios and notification alert audios are verified as highly functional.
+
+---
+
+## Sequencing Notes
+- Develop Phase 1 using public sandbox assets (`/public/models/`) first.
+- Apply database migrations in Phase 2 only after testing model compatibility.
+- Ensure strict error handling in Phase 3 so missing assets never cause visual novel or chat loop freezes.
